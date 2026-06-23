@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Decision Support Tool</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="header-titles">
+          <span class="header-title">Weather Decision Support Tool</span>
+          <span class="header-subtitle">Emergency Management — Decision Aid Only</span>
+        </div>
+      </div>
+      <div class="header-meta" id="live-clock"></div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- CONTEXT PANEL -->
+    <section class="card context-card">
+      <h2 class="card-title">Assessment Context</h2>
+      <div class="form-grid three-col">
+
+        <div class="form-group">
+          <label for="county">County</label>
+          <select id="county">
+            <option value="">— Select county —</option>
+            <option value="payne">Payne County</option>
+            <option value="tulsa">Tulsa County</option>
+            <option value="cherokee">Cherokee County</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="assessment-date">Date of Assessment</label>
+          <input type="date" id="assessment-date" />
+        </div>
+
+        <div class="form-group">
+          <label for="time-window">Primary Window of Concern</label>
+          <select id="time-window">
+            <option value="full">Full Day</option>
+            <option value="morning">Morning (before noon)</option>
+            <option value="afternoon">Afternoon (noon – 6 PM)</option>
+            <option value="evening">Evening (after 6 PM)</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="form-group" style="margin-top:1rem;">
+        <label for="assessor-name">Assessor Name <span class="optional">(optional — for export record)</span></label>
+        <input type="text" id="assessor-name" placeholder="e.g. Jane Smith, Emergency Management" />
+      </div>
+    </section>
+
+    <!-- SEVERE WEATHER -->
+    <section class="card">
+      <h2 class="card-title">Severe Weather Threat</h2>
+      <p class="card-desc">
+        Check active alerts for the selected county at
+        <a href="https://forecast.weather.gov" target="_blank">forecast.weather.gov</a> or the
+        <a href="https://www.weather.gov/oun/" target="_blank">NWS Norman forecast office</a>.
+        The Storm Prediction Center (<a href="https://www.spc.noaa.gov" target="_blank">spc.noaa.gov</a>)
+        provides outlooks for tornado and hail threats.
+      </p>
+
+      <div class="form-grid two-col">
+
+        <div class="form-group">
+          <label for="nws-alert">Highest Active NWS Alert Level</label>
+          <select id="nws-alert">
+            <option value="0">None</option>
+            <option value="1">Special Weather Statement</option>
+            <option value="2">Advisory</option>
+            <option value="3">Watch</option>
+            <option value="4">Warning</option>
+            <option value="5">Tornado Warning / PDS / Emergency</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tornado-watch">Tornado Watch in Effect?</label>
+          <select id="tornado-watch">
+            <option value="0">No</option>
+            <option value="1">Yes — Tornado Watch</option>
+            <option value="2">Yes — PDS Tornado Watch</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="lightning">Active Lightning Warning Nearby?</label>
+          <select id="lightning">
+            <option value="0">No</option>
+            <option value="1">Yes — within 8 miles (Perry Weather or flash-to-bang &lt;30 sec)</option>
+          </select>
+          <span class="input-hint">Active lightning within 8 miles forces Outdoor Exposure to Red regardless of other scores.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="hail">Hail Threat</label>
+          <select id="hail">
+            <option value="0">None forecast</option>
+            <option value="1">Small hail possible (&lt;1")</option>
+            <option value="2">Large hail possible (≥1")</option>
+          </select>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- WINTER HAZARDS -->
+    <section class="card">
+      <h2 class="card-title">Winter Hazards</h2>
+      <p class="card-desc">
+        Ice accumulation and wind chill forecasts are available from the
+        <a href="https://forecast.weather.gov" target="_blank">NWS area forecast</a> for each county.
+        The <a href="https://www.mesonet.org" target="_blank">Oklahoma Mesonet</a> provides real-time
+        observed temperatures, wind speeds, and precipitation data from stations across the state,
+        including stations near each campus. Road condition observations can supplement forecast data.
+      </p>
+
+      <div class="form-grid three-col">
+
+        <div class="form-group">
+          <label for="ice-accum">Ice Accumulation Forecast</label>
+          <select id="ice-accum">
+            <option value="0">None</option>
+            <option value="1">Trace – 0.10"</option>
+            <option value="2">0.10" – 0.25"</option>
+            <option value="3">&gt;0.25" (Ice Storm Warning threshold)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="snow-accum">Snow Accumulation Forecast</label>
+          <select id="snow-accum">
+            <option value="0">None / &lt;1"</option>
+            <option value="1">1" – 3"</option>
+            <option value="2">3" – 6"</option>
+            <option value="3">&gt;6"</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="wind-chill">Wind Chill Forecast (low)</label>
+          <select id="wind-chill">
+            <option value="0">Above 20°F</option>
+            <option value="1">0°F – 20°F</option>
+            <option value="2">-10°F – 0°F</option>
+            <option value="3">Below -10°F</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="precip-type">Precipitation Type</label>
+          <select id="precip-type">
+            <option value="0">None or rain only</option>
+            <option value="1">Rain + gusty wind</option>
+            <option value="2">Freezing rain</option>
+            <option value="3">Sleet / ice mix</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="freeze-thaw">Freeze-Thaw Cycle?</label>
+          <select id="freeze-thaw">
+            <option value="0">No</option>
+            <option value="1">Yes — temps crossing 32°F, black ice risk</option>
+          </select>
+          <span class="input-hint">Particularly dangerous in morning hours on untreated surfaces.</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- HEAT HAZARDS -->
+    <section class="card">
+      <h2 class="card-title">Heat Hazards</h2>
+      <p class="card-desc">
+        Heat index forecasts are available from the
+        <a href="https://forecast.weather.gov" target="_blank">NWS area forecast</a>.
+        Wet Bulb Globe Temperature (WBGT) is a more accurate heat stress measure and is available
+        through Perry Weather during warm months. If WBGT is entered, it will override the
+        Heat Index in the calculation.
+      </p>
+
+      <div class="form-grid two-col">
+
+        <div class="form-group">
+          <label for="heat-index">Heat Index Forecast (high)</label>
+          <select id="heat-index">
+            <option value="0">Below 90°F</option>
+            <option value="1">90°F – 100°F (Caution)</option>
+            <option value="2">100°F – 108°F (Danger)</option>
+            <option value="3">Above 108°F (Extreme Danger)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="wbgt">Wet Bulb Globe Temperature — WBGT</label>
+          <select id="wbgt">
+            <option value="-1">Not available — use Heat Index above</option>
+            <option value="0">Below 80°F</option>
+            <option value="1">80°F – 85°F (Moderate risk)</option>
+            <option value="2">85°F – 90°F (High risk)</option>
+            <option value="3">Above 90°F (Extreme risk)</option>
+          </select>
+          <span class="input-hint">Available from Perry Weather. Preferred over Heat Index when available.</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- WIND -->
+    <section class="card">
+      <h2 class="card-title">Wind Conditions</h2>
+      <p class="card-desc">
+        Sustained wind and gust forecasts are available from the
+        <a href="https://forecast.weather.gov" target="_blank">NWS area forecast</a> and
+        <a href="https://www.mesonet.org" target="_blank">Oklahoma Mesonet</a> current observations.
+        High Wind Warnings and Wind Advisories will appear in the NWS alert feed.
+      </p>
+
+      <div class="form-grid two-col">
+
+        <div class="form-group">
+          <label for="wind-speed">Sustained Wind Forecast</label>
+          <select id="wind-speed">
+            <option value="0">Below 20 mph</option>
+            <option value="1">20 – 35 mph</option>
+            <option value="2">35 – 50 mph</option>
+            <option value="3">Above 50 mph</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="wind-gusts">Expected Gusts</label>
+          <select id="wind-gusts">
+            <option value="0">Below 30 mph</option>
+            <option value="1">30 – 45 mph</option>
+            <option value="2">45 – 60 mph</option>
+            <option value="3">Above 60 mph</option>
+          </select>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ROAD & TRAVEL -->
+    <section class="card">
+      <h2 class="card-title">Road &amp; Travel Conditions</h2>
+      <p class="card-desc">
+        Current road conditions for Oklahoma are available at
+        <a href="https://www.511.oklahoma.gov" target="_blank">511.oklahoma.gov</a>.
+        ODOT travel advisories and warnings are issued through the
+        <a href="https://www.odot.org" target="_blank">Oklahoma Department of Transportation</a>.
+        Campus walkway and parking lot conditions should be confirmed with Facilities Management
+        or University Police when available.
+      </p>
+
+      <div class="form-grid two-col">
+
+        <div class="form-group">
+          <label for="road-conditions">Road Conditions (primary routes)</label>
+          <select id="road-conditions">
+            <option value="0">Clear / dry</option>
+            <option value="1">Wet — reduced visibility or spray</option>
+            <option value="2">Patchy ice or snow — use caution</option>
+            <option value="3">Widespread ice / snow-packed — dangerous</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="odot-advisory">ODOT / Travel Advisory</label>
+          <select id="odot-advisory">
+            <option value="0">None</option>
+            <option value="1">Travel Advisory issued</option>
+            <option value="2">Travel Warning issued — avoid non-essential travel</option>
+            <option value="3">Emergency Travel Ban</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="campus-walkways">Campus Walkway / Parking Condition</label>
+          <select id="campus-walkways">
+            <option value="0">Clear</option>
+            <option value="1">Wet or muddy</option>
+            <option value="2">Icy patches reported</option>
+            <option value="3">Widespread ice — fall risk significant</option>
+          </select>
+          <span class="input-hint">Based on Facilities Management or University Police ground assessment.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="visibility">Visibility / Fog</label>
+          <select id="visibility">
+            <option value="0">Normal</option>
+            <option value="1">Reduced — Dense Fog Advisory</option>
+            <option value="2">Near zero — Dense Fog Warning</option>
+          </select>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- NOTES -->
+    <section class="card">
+      <h2 class="card-title">Additional Notes</h2>
+      <div class="form-group">
+        <label for="notes">Contextual notes for this assessment <span class="optional">(optional)</span></label>
+        <textarea id="notes" rows="3" placeholder="e.g. NWS forecast discussion mentions rapid deterioration after 3 PM. Facilities reports parking lots already pre-treated."></textarea>
+      </div>
+    </section>
+
+    <!-- CALCULATE -->
+    <div class="action-row">
+      <button class="btn-calculate" id="calculate-btn" onclick="calculateScores()">
+        Calculate Risk Assessment
+      </button>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <section class="results-panel" id="results-panel" style="display:none;">
+
+      <div class="results-header">
+        <h2>Assessment Results</h2>
+        <div id="results-context-line" class="results-context-line"></div>
+      </div>
+
+      <div class="score-cards-row">
+
+        <div class="score-card" id="score-card-ops">
+          <div class="score-label">Campus Operations</div>
+          <div class="stoplight-dot" id="dot-ops"></div>
+          <div class="score-status" id="status-ops"></div>
+          <div class="score-number" id="number-ops"></div>
+          <div class="score-description" id="desc-ops"></div>
+        </div>
+
+        <div class="score-card" id="score-card-outdoor">
+          <div class="score-label">Outdoor Exposure</div>
+          <div class="stoplight-dot" id="dot-outdoor"></div>
+          <div class="score-status" id="status-outdoor"></div>
+          <div class="score-number" id="number-outdoor"></div>
+          <div class="score-description" id="desc-outdoor"></div>
+        </div>
+
+        <div class="score-card" id="score-card-travel">
+          <div class="score-label">Road &amp; Travel</div>
+          <div class="stoplight-dot" id="dot-travel"></div>
+          <div class="score-status" id="status-travel"></div>
+          <div class="score-number" id="number-travel"></div>
+          <div class="score-description" id="desc-travel"></div>
+        </div>
+
+      </div>
+
+      <div class="condition-summary-wrapper">
+        <button class="summary-toggle" id="summary-toggle" onclick="toggleSummary()">
+          + View Condition Summary
+        </button>
+        <div class="condition-summary" id="condition-summary" style="display:none;">
+          <ul id="condition-list"></ul>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Decision Aid Only.</strong> This tool provides risk scoring to support — not replace — human judgment. Final decisions regarding campus operations and outdoor activities remain with authorized university leadership. All inputs and outputs should be documented as part of the decision record.
+      </div>
+
+      <div class="action-row">
+        <button class="btn-export" onclick="exportPDF()">Export Assessment as PDF</button>
+        <button class="btn-reset" onclick="resetForm()">Start New Assessment</button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Office of Emergency Management &nbsp;|&nbsp; Weather Decision Support Tool &nbsp;|&nbsp; <strong>For internal decision support use only</strong></p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
