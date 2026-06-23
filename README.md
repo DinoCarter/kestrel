@@ -23,7 +23,6 @@ Each score maps to a four-level stoplight (Green / Yellow / Orange / Red) with a
 ## Data Sources (Manual Entry)
 
 - NWS alerts: [forecast.weather.gov](https://forecast.weather.gov)
-- Road conditions: [511.oklahoma.gov](https://511.oklahoma.gov)
 - WBGT / lightning: Perry Weather (OSU subscription)
 
 ## Disclaimer
