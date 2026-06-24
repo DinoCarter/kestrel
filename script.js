@@ -38,7 +38,34 @@ setInterval(updateClock, 30000);
 document.addEventListener('DOMContentLoaded', () => {
   const d = document.getElementById('assessment-date');
   if (d) d.value = new Date().toISOString().split('T')[0];
+ 
+
+// Disclaimer modal
+  const modal = document.getElementById('disclaimer-modal');
+  const acceptBtn = document.getElementById('accept-disclaimer');
+
+  if (modal && acceptBtn) {
+
+    const accepted =
+      localStorage.getItem('wdstDisclaimerAccepted');
+
+    if (accepted === 'true') {
+      modal.style.display = 'none';
+    }
+
+    acceptBtn.addEventListener('click', () => {
+
+      localStorage.setItem(
+        'wdstDisclaimerAccepted',
+        'true'
+      );
+
+      modal.style.display = 'none';
+    });
+  }
+
 });
+
 
 // ── BASE SCORING WEIGHTS ────────────────────────────────────
 const WEIGHTS = {
