@@ -45,21 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const acceptBtn = document.getElementById('accept-disclaimer');
 
   if (modal && acceptBtn) {
-
-    const accepted =
-      localStorage.getItem('wdstDisclaimerAccepted');
-
-    if (accepted === 'true') {
-      modal.style.display = 'none';
-    }
-
     acceptBtn.addEventListener('click', () => {
-
-      localStorage.setItem(
-        'wdstDisclaimerAccepted',
-        'true'
-      );
-
       modal.style.display = 'none';
     });
   }
@@ -636,6 +622,7 @@ function resetForm() {
 // ── PDF EXPORT ───────────────────────────────────────────────
 function exportPDF() {
   const summary   = document.getElementById('condition-summary');
+  if (!summary) return;
   const wasHidden = summary.style.display === 'none';
   summary.style.display = 'block';
   const origTitle = document.title;
