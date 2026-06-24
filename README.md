@@ -17,7 +17,7 @@ Each score maps to a four-level stoplight (Green / Yellow / Orange / Red) with a
 | County | Campus |
 |---|---|
 | Payne County | Stillwater |
-| Tulsa County | Tulsa |
+| Tulsa County | Tulsa and CHS |
 | Cherokee County | Tahlequah |
 
 ## Data Sources (Manual Entry)
