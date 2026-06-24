@@ -510,46 +510,59 @@ function renderResults(opsScore, outdoorScore, travelScore, conditions, opsOverr
   const attLabels  = ['', '<100', '100–1,000', '1,000–5,000', '5,000+'];
   const attendance = getVal('attendance');
   let contextLine  = `${getCountyLabel()} · ${getDateLabel()} · ${getWindowLabel()} · Assessed ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-  if (document.getElementById('assessor-name').value) {
-    contextLine += ` by ${document.getElementById('assessor-name').value}`;
+  const assessorEl = document.getElementById('assessor-name');
+  if (assessorEl && assessorEl.value) {
+    contextLine += ` by ${assessorEl.value}`;
   }
   if (hasEvent) contextLine += ` · Outdoor event: est. ${attLabels[attendance] || 'unknown'} attendees`;
-  document.getElementById('results-context-line').textContent = contextLine;
+  const ctxEl = document.getElementById('results-context-line');
+  if (ctxEl) ctxEl.textContent = contextLine;
 
   // Condition list
   const ul = document.getElementById('condition-list');
-  ul.innerHTML = '';
-  conditions.forEach(c => {
-    const li = document.createElement('li');
-    li.className = `c-${c.color}`;
-    li.innerHTML = `<span class="cond-tag">${c.icon}</span><span>${c.text}</span>`;
-    ul.appendChild(li);
-  });
+  if (ul) {
+    ul.innerHTML = '';
+    conditions.forEach(c => {
+      const li = document.createElement('li');
+      li.className = `c-${c.color}`;
+      li.innerHTML = `<span class="cond-tag">${c.icon}</span><span>${c.text}</span>`;
+      ul.appendChild(li);
+    });
+  }
 
   // Reveal the skip-to-results link now that results exist
   const skipLink = document.getElementById('skip-to-results');
   if (skipLink) skipLink.style.display = 'inline';
 
   const panel = document.getElementById('results-panel');
-  panel.style.display = 'flex';
+  if (panel) panel.style.display = 'flex';
 
   // Move keyboard focus to results panel so keyboard and screen reader
   // users land here after calculating without tabbing through the whole form.
   // setTimeout gives the browser a tick to finish rendering first.
   setTimeout(() => {
-    panel.focus();
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (panel) {
+      try { panel.focus(); } catch (e) {}
+      try { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+    }
   }, 50);
 }
 
 function setScoreCard(id, score, levelObj, description, overrideText) {
   const categoryNames = { ops: 'Campus Operations', outdoor: 'Outdoor Exposure', travel: 'Road and Travel' };
-  document.getElementById(`dot-${id}`).className      = `stoplight-dot ${levelObj.level}`;
-  document.getElementById(`status-${id}`).className   = `score-status ${levelObj.level}`;
-  document.getElementById(`status-${id}`).textContent = levelObj.label;
-  document.getElementById(`number-${id}`).textContent = overrideText ? 'Override active' : `Score: ${score} out of 100`;
-  document.getElementById(`desc-${id}`).textContent   = overrideText || description;
-  document.getElementById(`score-card-${id}`).className = `score-card ${levelObj.level}`;
+  const dotEl = document.getElementById(`dot-${id}`);
+  if (dotEl) dotEl.className = `stoplight-dot ${levelObj.level}`;
+  const statusEl = document.getElementById(`status-${id}`);
+  if (statusEl) {
+    statusEl.className = `score-status ${levelObj.level}`;
+    statusEl.textContent = levelObj.label;
+  }
+  const numEl = document.getElementById(`number-${id}`);
+  if (numEl) numEl.textContent = overrideText ? 'Override active' : `Score: ${score} out of 100`;
+  const descEl = document.getElementById(`desc-${id}`);
+  if (descEl) descEl.textContent = overrideText || description;
+  const cardEl = document.getElementById(`score-card-${id}`);
+  if (cardEl) cardEl.className = `score-card ${levelObj.level}`;
   const srEl = document.getElementById(`${id}-sr-label`);
   if (srEl) {
     srEl.textContent = overrideText
@@ -562,21 +575,25 @@ function setScoreCard(id, score, levelObj, description, overrideText) {
 function toggleSummary() {
   const summary  = document.getElementById('condition-summary');
   const btn      = document.getElementById('summary-toggle');
+  if (!summary || !btn) return;
   const isHidden = summary.style.display === 'none';
   summary.style.display = isHidden ? 'block' : 'none';
   btn.textContent = isHidden ? '- Hide Condition Summary' : '+ View Condition Summary';
   btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-  if (isHidden) summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (isHidden) try { summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }
 
 // ── LABEL HELPERS ────────────────────────────────────────────
 function getCountyLabel() {
   const map = { payne: 'Payne County', tulsa: 'Tulsa County', cherokee: 'Cherokee County' };
-  return map[document.getElementById('county').value] || 'Selected Location';
+  const el = document.getElementById('county');
+  if (!el) return 'Selected Location';
+  return map[el.value] || 'Selected Location';
 }
 
 function getDateLabel() {
-  const d = document.getElementById('assessment-date').value;
+  const el = document.getElementById('assessment-date');
+  const d = el ? el.value : '';
   if (!d) return 'Date not specified';
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
@@ -585,24 +602,34 @@ function getDateLabel() {
 
 function getWindowLabel() {
   const map = { full: 'Full Day', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
-  return map[document.getElementById('time-window').value] || 'Full Day';
+  const el = document.getElementById('time-window');
+  if (!el) return 'Full Day';
+  return map[el.value] || 'Full Day';
 }
 
 // ── RESET ────────────────────────────────────────────────────
 function resetForm() {
-  document.getElementById('results-panel').style.display     = 'none';
-  document.getElementById('condition-summary').style.display  = 'none';
+  const panel = document.getElementById('results-panel');
+  if (panel) panel.style.display = 'none';
+  const summary = document.getElementById('condition-summary');
+  if (summary) summary.style.display = 'none';
   const toggleBtn = document.getElementById('summary-toggle');
-  toggleBtn.textContent = '+ View Condition Summary';
-  toggleBtn.setAttribute('aria-expanded', 'false');
+  if (toggleBtn) {
+    toggleBtn.textContent = '+ View Condition Summary';
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  }
   const skipLink = document.getElementById('skip-to-results');
   if (skipLink) skipLink.style.display = 'none';
   document.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
-  document.getElementById('assessor-name').value = '';
-  document.getElementById('notes').value = '';
-  document.getElementById('assessment-date').value = new Date().toISOString().split('T')[0];
+  const assessor = document.getElementById('assessor-name');
+  if (assessor) assessor.value = '';
+  const notes = document.getElementById('notes');
+  if (notes) notes.value = '';
+  const ad = document.getElementById('assessment-date');
+  if (ad) ad.value = new Date().toISOString().split('T')[0];
   // Return focus to the top of the form
-  document.getElementById('county').focus();
+  const county = document.getElementById('county');
+  if (county) county.focus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
