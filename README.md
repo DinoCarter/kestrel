@@ -234,11 +234,23 @@ This tool supports decision-making — it does not make decisions. Final authori
 
 ## Roadmap
 
-- NWS and Oklahoma Mesonet API integration
-- Perry Weather API integration (WBGT, lightning)
-- User authentication and assessment history
-- Multi-campus dashboard view
+### Near Term
+- **Improved PDF Export** - Generate a clean assessment report including date, assessor, inputs, scores, and condition summary.
+- **Form Validation** - Require critical fields before calculation. Add clear inline error messages for missing or invalid inputs.
+- **Assessment Comparison** - Compare two assessments side by side. Highlight delta.
+
+### Medium Term
+- **Persistent Data Storage** - Store assessments with timestamps, assessor information, inputs, and results. Create a searchable decision history for record-keeping and audits.
+- **User Authentication** - Associate assessments with individual users.
+- **Historical Trends and Reporting** - View assessment history over time. Analyze trends and compare decisions against observed conditions.
+- **Multi-Location Dashboard** - Monitor assessment status across multiple campuses or locations from a single view.
+
+### Long Term
+- **National Weather Service Integration** - Auto-populate weather alerts and watch/warning information.
+- **Mesonet Integration** -  Import weather observations such as temperature, wind, and precipitation.
+
+### Usability Enhancements
+
+- **Seasonal Assessment Modes** - Adjust displayed hazards based on the current season to reduce unnecessary inputs and streamline assessments.
 
 ---
-
-*OSU Office of Emergency Management*
