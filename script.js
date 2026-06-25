@@ -1,633 +1,725 @@
 /**
- * Weather Decision Support Tool — v2
- * Oklahoma State University — Office of Emergency Management
- * script.js
+ * WDST v2.0 — script.js
+ * Oklahoma State University Office of Emergency Management
  *
- * ARCHITECTURE NOTES:
- * - Each hazard category produces a sub-score on a 0–100 scale
- * - Sub-scores are weighted into three final scores:
- *     opsScore     = Campus Operations
- *     outdoorScore = Outdoor Exposure (weight-adjusted for events)
- *     travelScore  = Road & Travel (standalone)
- * - Outdoor weights shift when a major outdoor event is scheduled,
- *   scaling by attendance tier (see OUTDOOR_EVENT_WEIGHTS)
- * - Tornado warning and active lightning hard-override relevant scores
- * - Forecast confidence is displayed but does not alter scores
- * - No external dependencies — runs entirely in the browser
- *
- * STOPLIGHT THRESHOLDS (v2):
- *   Green  0–24
- *   Yellow 25–49
- *   Amber  50–74
- *   Red    75–100
+ * All scoring logic, UI behavior, focus management, and PDF export.
+ * No external dependencies — runs entirely in the browser.
  */
 
-// ── CLOCK ───────────────────────────────────────────────────
-function updateClock() {
-  const el = document.getElementById('live-clock');
-  if (!el) return;
-  const now = new Date();
-  el.textContent = now.toLocaleString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
-  });
-}
-updateClock();
-setInterval(updateClock, 30000);
+'use strict';
 
-document.addEventListener('DOMContentLoaded', () => {
-  const d = document.getElementById('assessment-date');
-  if (d) d.value = new Date().toISOString().split('T')[0];
- 
+/* ═══════════════════════════════════════════════════════════
+   1. SCORING ENGINE
+   ═══════════════════════════════════════════════════════════ */
 
-// Disclaimer modal
-  const modal = document.getElementById('disclaimer-modal');
-  const acceptBtn = document.getElementById('accept-disclaimer');
-
-  if (modal && acceptBtn) {
-    acceptBtn.addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
-  }
-
-});
-
-
-// ── BASE SCORING WEIGHTS ────────────────────────────────────
+/**
+ * Weight tables — Section 5 of PRD.
+ * Structure: WEIGHTS[mode][inputKey][scoreType]
+ * scoreType: 'campus' | 'outdoor' | 'roads'
+ * All weights per scoreType sum to 100.
+ */
 const WEIGHTS = {
-  ops: {
-    severe: 0.45,
-    winter: 0.20,
-    flood:  0.20,
-    heat:   0.05,
-    wind:   0.10
+  severe: {
+    rain:      { campus: 15, outdoor: 20, roads: 20 },
+    hail:      { campus: 15, outdoor: 15, roads: 15 },
+    lightning: { campus:  5, outdoor: 20, roads:  5 },
+    windSust:  { campus: 20, outdoor: 10, roads:  5 },
+    windGust:  { campus: 20, outdoor: 10, roads: 15 },
+    flood:     { campus:  5, outdoor:  5, roads: 20 },
+    tornado:   { campus: 20, outdoor: 20, roads: 20 },
   },
-  // Base outdoor weights — may be overridden by event modifier
-  outdoor: {
-    severe: 0.40,
-    winter: 0.15,
-    flood:  0.05,
-    heat:   0.25,
-    wind:   0.15
-  }
+  heat: {
+    // heatStress = WBGT or Heat Index (mutually exclusive, same weight)
+    heatStress: { campus: 80, outdoor: 80, roads: 10 },
+    windSust:   { campus: 20, outdoor: 20, roads: 10 },
+    // remaining 80% of roads weight has no applicable input in heat mode
+  },
+  winter: {
+    ice:        { campus: 50, outdoor: 20, roads: 40 },
+    snow:       { campus: 20, outdoor: 20, roads: 20 },
+    windChill:  { campus: 10, outdoor: 30, roads:  5 },
+    windGust:   { campus:  5, outdoor: 20, roads: 15 },
+    freezeThaw: { campus: 15, outdoor: 10, roads: 20 },
+  },
 };
 
-// ── OUTDOOR EVENT WEIGHT TABLES ─────────────────────────────
 /**
- * When a major outdoor event is scheduled, weight shifts from
- * winter and flood toward severe, heat, and wind — reflecting
- * that crowd exposure to real-time hazards dominates over
- * accumulation-style winter and flood risk.
- *
- * All rows sum to 1.0.
- * attendance value: 0=no event, 1=<100, 2=100-1000, 3=1000-5000, 4=5000+
+ * Recommendation text per score band and category.
+ * Returns action-oriented text appropriate for the level.
  */
-const OUTDOOR_EVENT_WEIGHTS = [
-  // No event — base weights
-  { severe: 0.40, winter: 0.15, flood: 0.05, heat: 0.25, wind: 0.15 },
-  // < 100
-  { severe: 0.42, winter: 0.12, flood: 0.03, heat: 0.27, wind: 0.16 },
-  // 100–1,000
-  { severe: 0.45, winter: 0.07, flood: 0.02, heat: 0.29, wind: 0.17 },
-  // 1,000–5,000
-  { severe: 0.48, winter: 0.02, flood: 0.01, heat: 0.31, wind: 0.18 },
-  // 5,000+
-  { severe: 0.50, winter: 0.00, flood: 0.00, heat: 0.33, wind: 0.17 }
-];
-
-// ── HELPERS ─────────────────────────────────────────────────
-function getVal(id) {
-  const el = document.getElementById(id);
-  if (!el) return 0;
-  const v = parseInt(el.value, 10);
-  return isNaN(v) ? 0 : v;
-}
-
-function getStrVal(id) {
-  const el = document.getElementById(id);
-  return el ? el.value : '';
+function getRecommendation(level, category) {
+  const recs = {
+    green: {
+      campus:  'No weather-based action needed. Continue standard monitoring.',
+      outdoor: 'No weather-based action needed. Continue standard monitoring.',
+      roads:   'No weather-based action needed. Continue standard monitoring.',
+    },
+    yellow: {
+      campus:  'Increase monitoring frequency. Notify decision makers. Begin contingency planning.',
+      outdoor: 'Increase monitoring frequency. Notify decision makers. Consider event modifications.',
+      roads:   'Increase monitoring frequency. Notify travel coordinators. Begin contingency planning.',
+    },
+    amber: {
+      campus:  'Evaluate operational delays or modifications. Earlier decision points advised.',
+      outdoor: 'Evaluate delays, modifications, or contingency activation. Earlier decision points advised.',
+      roads:   'Evaluate travel restrictions or route modifications. Contingency activation advised.',
+    },
+    red: {
+      campus:  'Evaluate closure or emergency procedures. Immediate action may be required.',
+      outdoor: 'Evaluate cancellation or emergency procedures. Immediate action may be required.',
+      roads:   'Evaluate travel restriction or emergency procedures. Immediate action may be required.',
+    },
+  };
+  return recs[level][category];
 }
 
 /**
- * Maps a 0–3 tier to a 0–100 sub-score contribution.
- * maxPts = maximum points this input contributes at tier 3.
+ * Map a numeric score (0–100) to a risk level label.
  */
-function tierToScore(tier, maxPts) {
-  const map = [0, 0.33, 0.67, 1.0];
-  return Math.round(map[Math.min(tier, 3)] * maxPts);
-}
-
-// ── CATEGORY SCORERS ────────────────────────────────────────
-
-function scoreSevere() {
-  const alertPts = [0, 10, 20, 40, 60, 90][getVal('nws-alert')] || 0;
-  const watchPts = [0, 20, 35][getVal('tornado-watch')] || 0;
-  const hailPts  = [0, 10, 20][getVal('hail')] || 0;
-  return Math.min(100, alertPts + watchPts + hailPts);
-}
-
-function scoreFlood() {
-  // Direct tier-to-score mapping per PRD spec
-  const map = [0, 35, 70, 100];
-  return map[Math.min(getVal('flood-level'), 3)];
-}
-
-function scoreWinter() {
-  // Precipitation type: None=0, Rain+Wind=20, FreezingDrizzle=50, FreezingRain=75, Sleet/Ice=100
-  const precipScores = [0, 20, 50, 75, 100];
-  const precipRaw    = Math.min(getVal('precip-type'), 4);
-  const precipPts    = Math.round(precipScores[precipRaw] * 0.15); // 15pt max contribution
-
-  const icePts       = tierToScore(getVal('ice-accum'),   40);
-  const snowPts      = tierToScore(getVal('snow-accum'),  20);
-  const windChillPts = tierToScore(getVal('wind-chill'),  20);
-  const freezePts    = getVal('freeze-thaw') === 1 ? 10 : 0;
-
-  return Math.min(100, icePts + snowPts + windChillPts + precipPts + freezePts);
-}
-
-function scoreHeat() {
-  const wbgt = getVal('wbgt');
-  if (wbgt >= 0) return tierToScore(wbgt, 100);
-  return tierToScore(getVal('heat-index'), 100);
-}
-
-function scoreWind() {
-  const windPts = tierToScore(getVal('wind-speed'), 60);
-  const gustPts = tierToScore(getVal('wind-gusts'), 40);
-  return Math.min(100, windPts + gustPts);
-}
-
-function scoreTravel() {
-  // FR-3: Road 40, ODOT 30, Visibility 20, Walkways 10
-  const roadPts = tierToScore(getVal('road-conditions'),  40);
-  const odotPts = tierToScore(getVal('odot-advisory'),    30);
-  const visPts  = tierToScore(getVal('visibility'),       20);
-  const walkPts = tierToScore(getVal('campus-walkways'),  10);
-  // Flood adds directly to travel score (up to 20 pts)
-  const floodTravelPts = Math.round(scoreFlood() * 0.20);
-  return Math.min(100, roadPts + odotPts + visPts + walkPts + floodTravelPts);
-}
-
-// ── OUTDOOR WEIGHT SELECTOR ──────────────────────────────────
-function getOutdoorWeights() {
-  const hasEvent    = getVal('outdoor-event') === 1;
-  const attendance  = getVal('attendance');
-  if (!hasEvent) return OUTDOOR_EVENT_WEIGHTS[0];
-  // attendance: 1=<100, 2=100-1000, 3=1000-5000, 4=5000+
-  return OUTDOOR_EVENT_WEIGHTS[Math.min(attendance, 4)] || OUTDOOR_EVENT_WEIGHTS[1];
-}
-
-// ── MAIN CALCULATION ────────────────────────────────────────
-function calculateScores() {
-  const severe = scoreSevere();
-  const flood  = scoreFlood();
-  const winter = scoreWinter();
-  const heat   = scoreHeat();
-  const wind   = scoreWind();
-  const travel = scoreTravel();
-
-  const ow = getOutdoorWeights();
-
-  let opsScore = Math.round(
-    severe * WEIGHTS.ops.severe +
-    winter * WEIGHTS.ops.winter +
-    flood  * WEIGHTS.ops.flood  +
-    heat   * WEIGHTS.ops.heat   +
-    wind   * WEIGHTS.ops.wind
-  );
-
-  let outdoorScore = Math.round(
-    severe * ow.severe +
-    winter * ow.winter +
-    flood  * ow.flood  +
-    heat   * ow.heat   +
-    wind   * ow.wind
-  );
-
-  let travelScore = travel;
-
-  // ── HARD OVERRIDES ──
-  const tornadoWarning  = getVal('nws-alert') === 5;
-  const lightningActive = getVal('lightning') === 1;
-
-  let opsOverride     = null;
-  let outdoorOverride = null;
-
-  if (tornadoWarning) {
-    opsScore        = 100;
-    outdoorScore    = 100;
-    opsOverride     = 'Tornado Warning / PDS in effect — automatic Red.';
-    outdoorOverride = 'Tornado Warning / PDS in effect — automatic Red.';
-  }
-
-  if (lightningActive && !tornadoWarning) {
-    outdoorScore    = 100;
-    outdoorOverride = 'Active lightning detected within 8 miles — outdoor exposure automatic Red.';
-  }
-
-  opsScore     = Math.min(100, Math.max(0, opsScore));
-  outdoorScore = Math.min(100, Math.max(0, outdoorScore));
-  travelScore  = Math.min(100, Math.max(0, travelScore));
-
-  const conditions = buildConditionSummary(
-    severe, flood, winter, heat, wind, travel,
-    tornadoWarning, lightningActive
-  );
-
-  renderResults(opsScore, outdoorScore, travelScore, conditions, opsOverride, outdoorOverride);
-}
-
-// ── STOPLIGHT LOGIC (v2 thresholds) ─────────────────────────
 function scoreToLevel(score) {
-  if (score < 25) return { level: 'green',  label: 'Normal Operations' };
-  if (score < 50) return { level: 'yellow', label: 'Elevated Caution' };
-  if (score < 75) return { level: 'amber',  label: 'High Risk' };
-  return               { level: 'red',    label: 'Severe Risk' };
+  if (score < 25)  return 'green';
+  if (score < 50)  return 'yellow';
+  if (score < 75)  return 'amber';
+  return 'red';
 }
 
-const SCORE_DESCRIPTIONS = {
-  ops: {
-    green:  'No operational changes recommended.',
-    yellow: 'Increase monitoring and notify decision makers.',
-    amber:  'Evaluate delayed start, early release, staffing adjustments, and contingency plans.',
-    red:    'Evaluate closure, cancellation, sheltering actions, and emergency procedures.'
-  },
-  outdoor: {
-    green:  'Activities may proceed. Maintain normal weather awareness.',
-    yellow: 'Maintain monitoring and identify shelter options.',
-    amber:  'Modify or relocate activities. Reduce exposure duration.',
-    red:    'Suspend or cancel outdoor activities.'
-  },
-  travel: {
-    green:  'Normal travel conditions.',
-    yellow: 'Allow extra travel time. Reduce speed in reduced-visibility or wet conditions.',
-    amber:  'Limit travel to essential purposes. Notify commuters before departure.',
-    red:    'Restrict travel to essential personnel when practical.'
-  }
+const LEVEL_LABELS = {
+  green:  'Normal Operations',
+  yellow: 'Elevated Caution',
+  amber:  'High Risk',
+  red:    'Severe Risk',
 };
 
-// ── CONDITION SUMMARY ────────────────────────────────────────
-function buildConditionSummary(severe, flood, winter, heat, wind, travel, tornadoWarning, lightningActive) {
-  const items   = [];
-  const county  = getCountyLabel();
-  const window  = getWindowLabel();
+/**
+ * Calculate a single score from an inputs object and a weight row.
+ * Formula: Σ(rawScore × weight) / 100
+ * Capped 0–100, rounded to nearest integer.
+ */
+/**
+ * Read all severe weather inputs from the DOM.
+ * Returns { campus, outdoor, roads } scores.
+ */
+function calcSevereScores() {
+  const inputs = {
+    rain:      getSelectVal('sw-rain'),
+    hail:      getSelectVal('sw-hail'),
+    lightning: getRadioVal('sw-lightning'),
+    windSust:  getSelectVal('sw-wind-sustained'),
+    windGust:  getSelectVal('sw-wind-gust'),
+    flood:     getRadioVal('sw-flood'),
+    tornado:   getRadioVal('sw-tornado'),
+  };
+  return {
+    campus:  calcScoreByType(inputs, 'severe', 'campus'),
+    outdoor: calcScoreByType(inputs, 'severe', 'outdoor'),
+    roads:   calcScoreByType(inputs, 'severe', 'roads'),
+    rawInputs: inputs,
+  };
+}
 
-  function riskColor(score) {
-    if (score < 25) return 'green';
-    if (score < 50) return 'yellow';
-    if (score < 75) return 'amber';
-    return 'red';
+/**
+ * Generic helper: calculate score for a mode + scoreType combo.
+ */
+function calcScoreByType(inputs, mode, type) {
+  let total = 0;
+  const modeWeights = WEIGHTS[mode];
+  for (const key in modeWeights) {
+    total += (inputs[key] || 0) * (modeWeights[key][type] || 0);
   }
+  return Math.min(100, Math.max(0, Math.round(total / 100)));
+}
 
-  // ── Overrides ──
-  if (tornadoWarning) {
-    items.push({ color: 'red', icon: 'Tornado Warning',
-      text: `A Tornado Warning or PDS event is active in or near ${county}. All outdoor activities must be suspended immediately. Shelter-in-place protocols should be activated for all campus occupants.` });
-  }
-  if (lightningActive) {
-    items.push({ color: 'red', icon: 'Lightning',
-      text: `Active lightning has been detected within 8 miles. All outdoor activities must suspend immediately. Do not resume until 30 minutes have passed since the last observed lightning strike.` });
-  }
+/**
+ * Read all heat inputs from the DOM.
+ * WBGT and Heat Index are mutually exclusive.
+ */
+function calcHeatScores() {
+  const useWBGT = document.querySelector('input[name="heat-source"]:checked').value === 'wbgt';
+  const heatStress = useWBGT
+    ? getSelectVal('heat-wbgt')
+    : getSelectVal('heat-hi');
+  const inputs = {
+    heatStress,
+    windSust: getSelectVal('heat-wind'),
+  };
+  return {
+    campus:  calcScoreByType(inputs, 'heat', 'campus'),
+    outdoor: calcScoreByType(inputs, 'heat', 'outdoor'),
+    roads:   calcScoreByType(inputs, 'heat', 'roads'),
+    rawInputs: inputs,
+    usedWBGT: useWBGT,
+  };
+}
 
-  // ── Severe weather ──
-  const nwsAlert    = getVal('nws-alert');
-  const alertLabels = ['', 'Special Weather Statement', 'Advisory', 'Watch', 'Warning', 'Tornado Warning / PDS / Emergency'];
-  if (nwsAlert > 0 && !tornadoWarning) {
-    items.push({ color: riskColor(severe), icon: 'NWS Alert',
-      text: `The National Weather Service has issued a ${alertLabels[nwsAlert]} for ${county} during the ${window}. Monitor official NWS products and forecast discussions for updates.` });
-  }
-  const tornadoWatch = getVal('tornado-watch');
-  if (tornadoWatch > 0 && !tornadoWarning) {
-    items.push({ color: riskColor(severe), icon: 'Tornado Watch',
-      text: tornadoWatch === 2
-        ? `A Particularly Dangerous Situation (PDS) Tornado Watch is in effect for ${county}. This represents an elevated and potentially historic tornado threat. Identify shelter locations, notify campus leadership, and prepare to act immediately on any warnings.`
-        : `A Tornado Watch is in effect for ${county}. Atmospheric conditions are favorable for tornado development. Identify shelter locations and remain alert for any warning upgrades.` });
-  }
-  if (getVal('hail') === 2) {
-    items.push({ color: 'amber', icon: 'Hail',
-      text: `Large hail of one inch or greater is possible during the ${window}. Damage to vehicles, rooftop equipment, and outdoor structures is a concern. Advise the campus community to shelter vehicles when possible.` });
-  }
+/**
+ * Read all winter weather inputs from the DOM.
+ */
+function calcWinterScores() {
+  const inputs = {
+    ice:        getSelectVal('ww-ice'),
+    snow:       getSelectVal('ww-snow'),
+    windChill:  getSelectVal('ww-windchill'),
+    windGust:   getSelectVal('ww-gust'),
+    freezeThaw: getRadioVal('ww-freezethaw'),
+  };
+  return {
+    campus:  calcScoreByType(inputs, 'winter', 'campus'),
+    outdoor: calcScoreByType(inputs, 'winter', 'outdoor'),
+    roads:   calcScoreByType(inputs, 'winter', 'roads'),
+    rawInputs: inputs,
+  };
+}
 
-  // ── Flood ──
-  const floodLevel = getVal('flood-level');
-  if (floodLevel > 0) {
-    const floodMessages = [
-      '',
-      `Localized nuisance flooding is possible in ${county} during the ${window}. Low-lying areas, drainage corridors, and underpasses may experience standing water. Monitor conditions and avoid unnecessary travel through affected areas.`,
-      `A Flash Flood Watch is in effect for ${county}. Flash flooding is possible. Avoid flood-prone areas and do not attempt to drive through flooded roadways. Advise campus community to monitor conditions closely and plan alternate routes.`,
-      `A Flash Flood Warning is in effect for ${county}. Flash flooding is occurring or is imminent. Avoid all flood-prone areas immediately. Travel should be suspended where flooding is reported. Commuter students and staff should be notified before attempting travel.`
-    ];
-    items.push({ color: riskColor(flood), icon: 'Flooding', text: floodMessages[floodLevel] });
-  }
+/* ═══════════════════════════════════════════════════════════
+   2. CONDITION SUMMARY ENGINE
+   ═══════════════════════════════════════════════════════════ */
 
-  // ── Winter ──
-  const iceLevel = getVal('ice-accum');
-  if (iceLevel > 0) {
-    const iceMessages = [
-      '',
-      `Trace to 0.10 inches of ice accumulation is forecast for ${county} during the ${window}. Walkways and road surfaces may become slippery. Pre-treatment of surfaces and early morning monitoring are recommended.`,
-      `Ice accumulation of 0.10 to 0.25 inches is forecast. This range produces hazardous walking and driving conditions. Delays or operational modifications should be evaluated.`,
-      `Ice accumulation exceeding 0.25 inches is forecast, meeting or exceeding the Ice Storm Warning threshold. Campus operations closure is strongly indicated. Pre-position resources and notify essential personnel.`
-    ];
-    items.push({ color: riskColor(winter), icon: 'Ice Accumulation', text: iceMessages[iceLevel] });
-  }
+/**
+ * Generate condition summary items for each active mode.
+ * A condition item appears when rawScore > 0.
+ */
+function buildConditionSummary(mode, rawInputs, county, extra) {
+  const items = [];
+  const countyLabel = countyName(county);
 
-  const snowLevel = getVal('snow-accum');
-  if (snowLevel >= 2) {
-    const snowMessages = [
-      '', '',
-      `Three to six inches of snow is forecast. Plowing and de-icing operations will be required. Allow additional time for travel and campus access. Monitor Facilities Management updates on clearing progress.`,
-      `More than six inches of snow is forecast. Significant travel and campus access disruptions are expected. Coordinate with Facilities Management and University Police on response priorities.`
-    ];
-    items.push({ color: riskColor(winter), icon: 'Snow Accumulation', text: snowMessages[snowLevel] });
-  }
-
-  const windChill = getVal('wind-chill');
-  if (windChill >= 2) {
-    items.push({ color: riskColor(winter), icon: 'Wind Chill',
-      text: windChill === 3
-        ? `Wind chill values below -10°F are forecast. Frostbite can occur in less than 30 minutes on exposed skin. Extended outdoor exposure should not be permitted without cold weather protective equipment.`
-        : `Wind chill values between -10°F and 0°F are forecast. Outdoor activity should be limited and cold weather protective equipment is required for any extended exposure.` });
-  }
-
-  const precipType = getVal('precip-type');
-  if (precipType === 2) {
-    items.push({ color: 'amber', icon: 'Freezing Drizzle',
-      text: `Freezing drizzle is forecast during the ${window}. This hazard is particularly dangerous because accumulation is difficult to see on road and walkway surfaces. Black ice conditions are likely. Exercise significant caution.` });
-  } else if (precipType === 3) {
-    items.push({ color: riskColor(winter), icon: 'Freezing Rain',
-      text: `Freezing rain is forecast during the ${window}. Ice will accumulate on all exposed surfaces including roads, walkways, vehicles, and infrastructure. Hazardous travel and pedestrian conditions are expected.` });
-  } else if (precipType === 4) {
-    items.push({ color: riskColor(winter), icon: 'Sleet / Ice Mix',
-      text: `A sleet and ice mix is forecast during the ${window}. Accumulating sleet combined with freezing precipitation will create hazardous conditions on all surfaces. This combination is among the most operationally disruptive winter weather scenarios.` });
-  }
-
-  if (getVal('freeze-thaw') === 1) {
-    items.push({ color: 'amber', icon: 'Freeze-Thaw Cycle',
-      text: `A freeze-thaw cycle is forecast with temperatures crossing 32°F. This significantly increases black ice risk on road surfaces, elevated walkways, bridge decks, and shadowed areas. Morning hours typically carry the highest risk as overnight refreezing sets in.` });
-  }
-
-  // ── Heat ──
-  const wbgt    = getVal('wbgt');
-  const useWBGT = wbgt >= 0;
-  if (useWBGT && wbgt > 0) {
-    const wbgtMessages = [
-      '', '',
-      `WBGT of 85°F to 90°F indicates high heat stress conditions. Outdoor athletic and physical labor activities should be modified with mandatory rest breaks and hydration requirements. Consider rescheduling high-intensity work to cooler hours.`,
-      `WBGT above 90°F indicates extreme heat stress. Outdoor athletic activities should be suspended. Heat illness risk is significant without aggressive rest and hydration protocols. Outdoor events should be evaluated for postponement or indoor relocation.`
-    ];
-    items.push({ color: riskColor(heat), icon: 'WBGT', text: wbgtMessages[wbgt] });
-  } else if (!useWBGT) {
-    const hiLevel = getVal('heat-index');
-    if (hiLevel > 0) {
-      const hiMessages = [
-        '',
-        `Heat index values of 90°F to 100°F are forecast. Caution is warranted for extended outdoor exposure. Encourage hydration and access to shade, particularly for outdoor workers and event participants.`,
-        `Heat index values of 100°F to 108°F are forecast (NWS Danger range). Outdoor activity should be shortened and high-intensity work rescheduled to cooler hours. Ensure water and shade access for all outdoor personnel.`,
-        `Heat index values above 108°F are forecast (NWS Extreme Danger range). Outdoor activities should be cancelled or moved indoors. Heat illness risk is high for all individuals regardless of physical condition.`
-      ];
-      items.push({ color: riskColor(heat), icon: 'Heat Index', text: hiMessages[hiLevel] });
+  if (mode === 'severe') {
+    if (rawInputs.rain > 0) {
+      const rainLabel = rawInputs.rain === 33 ? '0.01–0.75"' : rawInputs.rain === 67 ? '0.75–1.5"' : '>1.5"';
+      items.push({
+        tag: 'RAIN ACCUMULATION',
+        level: scoreToLevel(rawInputs.rain),
+        text: `Forecast precipitation of ${rainLabel} for ${countyLabel}. Evaluate outdoor event surfaces, drainage around campus infrastructure, and road ponding risk.`,
+      });
+    }
+    if (rawInputs.hail > 0) {
+      const hailLabel = rawInputs.hail === 50 ? 'small hail (<1" diameter)' : 'large hail (≥1" diameter — golf ball size or larger)';
+      items.push({
+        tag: 'HAIL',
+        level: scoreToLevel(rawInputs.hail),
+        text: `${rawInputs.hail === 100 ? 'Large' : 'Small'} hail (${hailLabel}) forecast for ${countyLabel}. Evaluate roof, vehicle, and outdoor equipment exposure. Large hail meets NWS Severe Thunderstorm Warning criteria.`,
+      });
+    }
+    if (rawInputs.lightning > 0) {
+      items.push({
+        tag: 'LIGHTNING',
+        level: 'red',
+        text: `Lightning is forecast during the assessment period for ${countyLabel}. Outdoor activities should not proceed without an established lightning safety protocol and evacuation plan. This is a forecast-based input — not real-time detection.`,
+      });
+    }
+    if (rawInputs.windSust > 0) {
+      const windLabels = { 25: '20–30 mph', 50: '30–40 mph', 75: '40–50 mph', 100: '>50 mph' };
+      items.push({
+        tag: 'SUSTAINED WIND',
+        level: scoreToLevel(rawInputs.windSust),
+        text: `Sustained winds of ${windLabels[rawInputs.windSust]} forecast for ${countyLabel}. Evaluate structural exposure for temporary structures, outdoor signage, and event tenting. Winds above 40 mph may meet NWS Wind Advisory criteria.`,
+      });
+    }
+    if (rawInputs.windGust > 0) {
+      const gustLabels = { 25: '30–40 mph', 50: '40–50 mph', 75: '50–60 mph', 100: '>60 mph' };
+      items.push({
+        tag: 'WIND GUSTS',
+        level: scoreToLevel(rawInputs.windGust),
+        text: `Maximum gusts of ${gustLabels[rawInputs.windGust]} forecast for ${countyLabel}. Gusts above 58 mph meet NWS High Wind Warning criteria. Evaluate vehicle handling on open roadways and structural resilience.`,
+      });
+    }
+    if (rawInputs.flood > 0) {
+      items.push({
+        tag: 'FLASH FLOOD',
+        level: 'red',
+        text: `Flash flooding is possible during the forecast period for ${countyLabel}. Evaluate road closures on low-lying routes, campus drainage infrastructure, and parking lot flood risk. Reference NWS Flash Flood Watch or Warning for official guidance.`,
+      });
+    }
+    if (rawInputs.tornado > 0) {
+      items.push({
+        tag: 'TORNADO POSSIBLE',
+        level: 'red',
+        text: `Tornado occurrence is forecast as possible for ${countyLabel}. Verify shelter-in-place locations are accessible and that all campus areas have a clear evacuation route to interior spaces. Reference NWS Tornado Watch or SPC Convective Outlook for official guidance.`,
+      });
     }
   }
 
-  // ── Wind ──
-  const windSpeed = getVal('wind-speed');
-  const windGusts = getVal('wind-gusts');
-  if (windSpeed >= 2 || windGusts >= 2) {
-    const maxWind     = Math.max(windSpeed, windGusts);
-    const windMessages = [
-      '', '',
-      `Sustained winds of 35 to 50 mph with gusts up to 60 mph are possible during the ${window}. Outdoor structures, temporary signage, canopies, and tents may be unsafe. Outdoor events should be evaluated for relocation or postponement.`,
-      `Sustained winds above 50 mph with extreme gusts are forecast. High Wind Warning conditions are expected. Outdoor activities should not proceed. Large outdoor structures and vehicles are at risk.`
-    ];
-    items.push({ color: riskColor(wind), icon: 'Wind', text: windMessages[Math.min(maxWind, 3)] });
+  if (mode === 'heat') {
+    if (rawInputs.heatStress > 0) {
+      const usedWBGT = extra && extra.usedWBGT;
+      const measureLabel = usedWBGT ? 'WBGT' : 'Heat Index';
+      const thresholds = { 33: 'moderate heat stress', 67: 'high heat stress', 100: 'extreme heat stress' };
+      items.push({
+        tag: usedWBGT ? 'WBGT' : 'HEAT INDEX',
+        level: scoreToLevel(rawInputs.heatStress),
+        text: `Forecast ${measureLabel} indicates ${thresholds[rawInputs.heatStress]} conditions for ${countyLabel}. ${usedWBGT ? 'A WBGT ≥82°F meets the threshold for activity modification under most athletic and occupational heat protocols.' : 'A Heat Index ≥90°F meets the NWS Heat Advisory threshold.'} Evaluate outdoor work schedules, athletic activity, and the availability of cooling stations.`,
+      });
+    }
+    if (rawInputs.windSust > 0) {
+      items.push({
+        tag: 'WIND (HEAT CONTEXT)',
+        level: scoreToLevel(rawInputs.windSust),
+        text: `Sustained winds of ${['','<20 mph','20–30 mph','30–40 mph','>40 mph'][rawInputs.windSust === 25 ? 2 : rawInputs.windSust === 50 ? 3 : 4]} are forecast. At higher speeds (>30 mph), the cooling benefit of wind diminishes and sustained exposure risk remains elevated alongside heat stress.`,
+      });
+    }
   }
 
-  // ── Travel ──
-  const odotLevel = getVal('odot-advisory');
-  const roadLevel = getVal('road-conditions');
-  if (odotLevel >= 2) {
-    const odotMessages = [
-      '', '',
-      `An ODOT Travel Warning is in effect. Non-essential travel should be avoided. Commuter students and staff should be notified before morning departure and provided with guidance on campus access.`,
-      `An Emergency Travel Ban is in effect. Campus access for commuters is not recommended. Only essential personnel should be on campus and routes should be confirmed passable before travel.`
-    ];
-    items.push({ color: 'red', icon: 'ODOT Advisory', text: odotMessages[odotLevel] });
-  } else if (roadLevel >= 2) {
-    const roadMessages = [
-      '', '',
-      `Patchy ice or snow is reported on primary routes to campus. Commuters should allow significantly more travel time and exercise caution, particularly on bridges and elevated roadways.`,
-      `Widespread ice or packed snow is reported on primary routes. Travel is hazardous. Commuter students and staff should be notified before morning departure.`
-    ];
-    items.push({ color: riskColor(travel), icon: 'Road Conditions', text: roadMessages[roadLevel] });
+  if (mode === 'winter') {
+    if (rawInputs.ice > 0) {
+      const iceLabels = { 33: 'trace to 0.10"', 67: '0.10–0.25"', 100: '>0.25"' };
+      const iceNote = rawInputs.ice === 100
+        ? ' This exceeds the NWS Ice Storm Warning issuance threshold (≥0.25"). Campus operations historically have a high probability of disruption at this level.'
+        : rawInputs.ice === 67
+        ? ' This approaches the NWS Ice Storm Warning threshold (≥0.25").'
+        : '';
+      items.push({
+        tag: 'ICE ACCUMULATION',
+        level: scoreToLevel(rawInputs.ice),
+        text: `Ice accumulation of ${iceLabels[rawInputs.ice]} forecast for ${countyLabel}.${iceNote} Evaluate sidewalk treatment schedules, parking lot access, and the need for early campus operation changes.`,
+      });
+    }
+    if (rawInputs.snow > 0) {
+      const snowLabels = { 33: '1–3"', 67: '3–6"', 100: '>6"' };
+      items.push({
+        tag: 'SNOW ACCUMULATION',
+        level: scoreToLevel(rawInputs.snow),
+        text: `Snow accumulation of ${snowLabels[rawInputs.snow]} forecast for ${countyLabel}. Evaluate snow removal capacity, parking lot and walkway clearance timing, and the impact on early-morning campus access.`,
+      });
+    }
+    if (rawInputs.windChill > 0) {
+      const chillLabels = { 25: '20–32°F', 50: '10–20°F', 75: '0–10°F', 100: '<0°F' };
+      const chillNote = rawInputs.windChill >= 75
+        ? ' This meets the NWS Wind Chill Warning threshold (<0°F).'
+        : rawInputs.windChill === 50
+        ? ' This meets the NWS Wind Chill Advisory threshold (<20°F).'
+        : '';
+      items.push({
+        tag: 'WIND CHILL',
+        level: scoreToLevel(rawInputs.windChill),
+        text: `Wind chill values of ${chillLabels[rawInputs.windChill]} forecast for ${countyLabel}.${chillNote} Evaluate outdoor exposure duration for personnel, event attendees, and early-morning commuters. Frostbite risk increases significantly below 0°F.`,
+      });
+    }
+    if (rawInputs.windGust > 0) {
+      const gustLabels = { 25: '30–40 mph', 50: '40–50 mph', 75: '50–60 mph', 100: '>60 mph' };
+      items.push({
+        tag: 'WIND GUSTS',
+        level: scoreToLevel(rawInputs.windGust),
+        text: `Maximum gusts of ${gustLabels[rawInputs.windGust]} forecast for ${countyLabel}. In winter conditions, gusts significantly worsen wind chill exposure and create blowing snow hazards that reduce visibility on open roadways.`,
+      });
+    }
+    if (rawInputs.freezeThaw > 0) {
+      items.push({
+        tag: 'FREEZE-THAW CYCLE',
+        level: scoreToLevel(rawInputs.freezeThaw),
+        text: `Temperatures are expected to cross 32°F in both directions during the forecast period for ${countyLabel}. This is a primary black ice formation mechanism. Evaluate treatment schedules for untreated surfaces, particularly in morning hours when refreezing risk is highest.`,
+      });
+    }
   }
 
-  if (floodLevel >= 2) {
-    items.push({ color: riskColor(flood), icon: 'Flood — Travel',
-      text: `Flooding conditions may affect primary travel routes. Avoid all flooded roadways regardless of apparent depth. Turn around, don't drown.` });
-  }
-
-  const walkLevel = getVal('campus-walkways');
-  if (walkLevel >= 2) {
-    items.push({ color: riskColor(travel), icon: 'Campus Walkways',
-      text: walkLevel === 3
-        ? `Widespread ice has been reported on campus walkways and parking areas. Fall risk is significant. Consider limiting outdoor pedestrian movement until surfaces are treated. Pre-position additional de-icing resources.`
-        : `Icy patches have been reported on campus walkways. High-traffic areas should be treated as a priority. Advise campus community to use main walkways and exercise caution on all outdoor surfaces.` });
-  }
-
-  const visLevel = getVal('visibility');
-  if (visLevel >= 1) {
-    const visMessages = [
-      '',
-      `Visibility below one mile is forecast due to fog or precipitation. Commuters should reduce speed and increase following distance. Ensure campus exterior lighting is operational.`,
-      `Visibility below one quarter mile is forecast. Near-zero visibility conditions significantly increase accident risk for commuters. Consider early notification to commuter students and staff.`,
-      `Near-zero visibility conditions are forecast. Travel under these conditions is extremely hazardous. Commuter notifications should be sent before morning departure, and travel should be limited to essential purposes.`
-    ];
-    items.push({ color: riskColor(travel), icon: 'Visibility', text: visMessages[visLevel] });
-  }
-
-  // ── Campus context notes ──
-  const hasEvent   = getVal('outdoor-event') === 1;
-  const attendance = getVal('attendance');
-  if (hasEvent && attendance >= 3) {
-    const attLabels = ['', 'fewer than 100', '100 to 1,000', '1,000 to 5,000', 'more than 5,000'];
-    items.push({ color: 'yellow', icon: 'Event Context',
-      text: `A major outdoor event with an estimated attendance of ${attLabels[attendance]} is scheduled during the ${window}. Outdoor weather risk weights have been increased to reflect the elevated exposure of a large assembled group. Shelter and evacuation logistics should be confirmed in advance.` });
-  }
-
-  // ── Forecast confidence note ──
-  const confidence = getStrVal('forecast-confidence');
-  if (confidence === 'low') {
-    items.push({ color: 'yellow', icon: 'Forecast Confidence',
-      text: `Forecast confidence is rated Low for this assessment. Conditions may evolve significantly before the ${window}. Earlier decision points are advised and reassessment closer to the event is recommended.` });
-  }
-
-  // ── All clear ──
   if (items.length === 0) {
-    items.push({ color: 'green', icon: 'All Clear',
-      text: `No significant weather concerns have been identified for ${county} during the ${window}. Conditions support normal campus operations and outdoor activities. Continue standard weather monitoring.` });
+    items.push({
+      tag: 'ALL CLEAR',
+      level: 'green',
+      text: 'No inputs are contributing to an elevated score for this hazard mode. Continue standard weather monitoring protocols.',
+    });
   }
 
   return items;
 }
 
-// ── RENDER RESULTS ───────────────────────────────────────────
-function renderResults(opsScore, outdoorScore, travelScore, conditions, opsOverride, outdoorOverride) {
-  const opsLevel     = scoreToLevel(opsScore);
-  const outdoorLevel = scoreToLevel(outdoorScore);
-  const travelLevel  = scoreToLevel(travelScore);
+/* ═══════════════════════════════════════════════════════════
+   3. DOM HELPERS
+   ═══════════════════════════════════════════════════════════ */
 
-  setScoreCard('ops',     opsScore,     opsLevel,     SCORE_DESCRIPTIONS.ops[opsLevel.level],        opsOverride);
-  setScoreCard('outdoor', outdoorScore, outdoorLevel, SCORE_DESCRIPTIONS.outdoor[outdoorLevel.level], outdoorOverride);
-  setScoreCard('travel',  travelScore,  travelLevel,  SCORE_DESCRIPTIONS.travel[travelLevel.level],   null);
-
-  // Confidence badge
-  const confidence = getStrVal('forecast-confidence');
-  const confBadge  = document.getElementById('confidence-badge');
-  if (confBadge) {
-    const labels = { low: 'Low', moderate: 'Moderate', high: 'High' };
-    confBadge.textContent  = `Forecast Confidence: ${labels[confidence] || 'Not specified'}`;
-    confBadge.className    = `confidence-badge conf-${confidence || 'moderate'}`;
-  }
-
-  // Context line
-  const hasEvent   = getVal('outdoor-event') === 1;
-  const attLabels  = ['', '<100', '100–1,000', '1,000–5,000', '5,000+'];
-  const attendance = getVal('attendance');
-  let contextLine  = `${getCountyLabel()} · ${getDateLabel()} · ${getWindowLabel()} · Assessed ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-  const assessorEl = document.getElementById('assessor-name');
-  if (assessorEl && assessorEl.value) {
-    contextLine += ` by ${assessorEl.value}`;
-  }
-  if (hasEvent) contextLine += ` · Outdoor event: est. ${attLabels[attendance] || 'unknown'} attendees`;
-  const ctxEl = document.getElementById('results-context-line');
-  if (ctxEl) ctxEl.textContent = contextLine;
-
-  // Condition list
-  const ul = document.getElementById('condition-list');
-  if (ul) {
-    ul.innerHTML = '';
-    conditions.forEach(c => {
-      const li = document.createElement('li');
-      li.className = `c-${c.color}`;
-      li.innerHTML = `<span class="cond-tag">${c.icon}</span><span>${c.text}</span>`;
-      ul.appendChild(li);
-    });
-  }
-
-  // Reveal the skip-to-results link now that results exist
-  const skipLink = document.getElementById('skip-to-results');
-  if (skipLink) skipLink.style.display = 'inline';
-
-  const panel = document.getElementById('results-panel');
-  if (panel) panel.style.display = 'flex';
-
-  // Move keyboard focus to results panel so keyboard and screen reader
-  // users land here after calculating without tabbing through the whole form.
-  // setTimeout gives the browser a tick to finish rendering first.
-  setTimeout(() => {
-    if (panel) {
-      try { panel.focus(); } catch (e) {}
-      try { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
-    }
-  }, 50);
+function getSelectVal(id) {
+  return parseInt(document.getElementById(id)?.value || '0', 10);
 }
 
-function setScoreCard(id, score, levelObj, description, overrideText) {
-  const categoryNames = { ops: 'Campus Operations', outdoor: 'Outdoor Exposure', travel: 'Road and Travel' };
-  const dotEl = document.getElementById(`dot-${id}`);
-  if (dotEl) dotEl.className = `stoplight-dot ${levelObj.level}`;
-  const statusEl = document.getElementById(`status-${id}`);
-  if (statusEl) {
-    statusEl.className = `score-status ${levelObj.level}`;
-    statusEl.textContent = levelObj.label;
-  }
-  const numEl = document.getElementById(`number-${id}`);
-  if (numEl) numEl.textContent = overrideText ? 'Override active' : `Score: ${score} out of 100`;
-  const descEl = document.getElementById(`desc-${id}`);
-  if (descEl) descEl.textContent = overrideText || description;
-  const cardEl = document.getElementById(`score-card-${id}`);
-  if (cardEl) cardEl.className = `score-card ${levelObj.level}`;
-  const srEl = document.getElementById(`${id}-sr-label`);
-  if (srEl) {
-    srEl.textContent = overrideText
-      ? `${categoryNames[id]}: ${levelObj.label}. ${overrideText}`
-      : `${categoryNames[id]}: ${levelObj.label}. Score ${score} out of 100. ${description}`;
-  }
+function getRadioVal(name) {
+  const checked = document.querySelector(`input[name="${name}"]:checked`);
+  return checked ? parseInt(checked.value, 10) : 0;
 }
 
-// ── TOGGLE SUMMARY ───────────────────────────────────────────
-function toggleSummary() {
-  const summary  = document.getElementById('condition-summary');
-  const btn      = document.getElementById('summary-toggle');
-  if (!summary || !btn) return;
-  const isHidden = summary.style.display === 'none';
-  summary.style.display = isHidden ? 'block' : 'none';
-  btn.textContent = isHidden ? '- Hide Condition Summary' : '+ View Condition Summary';
-  btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-  if (isHidden) try { summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+function countyName(val) {
+  const names = {
+    payne:    'Payne County',
+    tulsa:    'Tulsa County',
+    cherokee: 'Cherokee County',
+  };
+  return names[val] || val;
 }
 
-// ── LABEL HELPERS ────────────────────────────────────────────
-function getCountyLabel() {
-  const map = { payne: 'Payne County', tulsa: 'Tulsa County', cherokee: 'Cherokee County' };
-  const el = document.getElementById('county');
-  if (!el) return 'Selected Location';
-  return map[el.value] || 'Selected Location';
-}
-
-function getDateLabel() {
-  const el = document.getElementById('assessment-date');
-  const d = el ? el.value : '';
-  if (!d) return 'Date not specified';
-  return new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+function formatDateTime(d) {
+  return d.toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
   });
 }
 
-function getWindowLabel() {
-  const map = { full: 'Full Day', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
-  const el = document.getElementById('time-window');
-  if (!el) return 'Full Day';
-  return map[el.value] || 'Full Day';
-}
+/* ═══════════════════════════════════════════════════════════
+   4. RESULTS RENDERER
+   ═══════════════════════════════════════════════════════════ */
 
-// ── RESET ────────────────────────────────────────────────────
-function resetForm() {
-  const panel = document.getElementById('results-panel');
-  if (panel) panel.style.display = 'none';
-  const summary = document.getElementById('condition-summary');
-  if (summary) summary.style.display = 'none';
-  const toggleBtn = document.getElementById('summary-toggle');
-  if (toggleBtn) {
-    toggleBtn.textContent = '+ View Condition Summary';
-    toggleBtn.setAttribute('aria-expanded', 'false');
+/**
+ * Build and inject all results HTML into #results-content.
+ */
+function renderResults(activeModes) {
+  const county       = document.getElementById('county').value;
+  const assessDate   = document.getElementById('assessment-date').value;
+  const forecastPer  = document.getElementById('forecast-period').value;
+  const assessor     = document.getElementById('assessor-name').value;
+  const confidence   = document.getElementById('forecast-confidence').value;
+  const calcTime     = formatDateTime(new Date());
+
+  // Gather checked advisories
+  const checkedAdvisories = [...document.querySelectorAll('input[name="advisory"]:checked')]
+    .map(el => el.value);
+
+  // Build meta line
+  const metaParts = [countyName(county)];
+  if (assessDate) metaParts.push(`Assessment date: ${assessDate}`);
+  if (forecastPer) metaParts.push(`Forecast period: ${forecastPer}`);
+  if (assessor) metaParts.push(`Assessor: ${assessor}`);
+  metaParts.push(`Generated: ${calcTime}`);
+
+  const confidenceLabels = { high: 'High Confidence', moderate: 'Moderate Confidence', low: 'Low Confidence' };
+  const confidenceBadgeClass = `confidence-badge--${confidence}`;
+
+  let html = `
+    <div class="results-header">
+      <div class="results-header-top">
+        <div>
+          <div class="results-title">Risk Assessment — ${countyName(county)}</div>
+          <div class="results-meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>
+        </div>
+        <span class="confidence-badge ${confidenceBadgeClass}">${confidenceLabels[confidence]}</span>
+      </div>
+      ${confidence === 'low' ? `
+      <div class="confidence-warning" role="alert">
+        <strong>⚠ Low Forecast Confidence:</strong>&nbsp; Forecast conditions may change significantly before the assessment period. Scores should be treated as preliminary. Reassess as the forecast solidifies.
+      </div>` : ''}
+      ${checkedAdvisories.length > 0 ? `
+      <div class="confidence-warning" style="background:#E3F2FD;border-color:#1565C0;color:#0D47A1;margin-top:8px;" role="note">
+        <strong>Active NWS Advisories on record:</strong>&nbsp; ${checkedAdvisories.join(', ')}.
+      </div>` : ''}
+    </div>
+  `;
+
+  // Build score blocks per mode
+  const modeOrder = ['severe', 'heat', 'winter'];
+  const modeConfig = {
+    severe: { label: '⛈ Severe Weather', cssClass: 'severe', calcFn: calcSevereScores },
+    heat:   { label: '☀ Heat',            cssClass: 'heat',   calcFn: calcHeatScores },
+    winter: { label: '❄ Winter Weather', cssClass: 'winter', calcFn: calcWinterScores },
+  };
+
+  const allConditionItems = [];
+
+  modeOrder.forEach(mode => {
+    if (!activeModes.includes(mode)) return;
+    const cfg = modeConfig[mode];
+    const result = cfg.calcFn();
+    const categories = [
+      { key: 'campus',  label: 'Campus Operations', score: result.campus },
+      { key: 'outdoor', label: 'Outdoor Activities', score: result.outdoor },
+      { key: 'roads',   label: 'Roads & Travel',     score: result.roads, subdued: mode === 'heat' },
+    ];
+
+    html += `
+      <div class="mode-results-block">
+        <div class="mode-results-label mode-results-label--${cfg.cssClass}">${cfg.label}</div>
+        <div class="score-cards">
+          ${categories.map(cat => renderScoreCard(cat, mode)).join('')}
+        </div>
+      </div>
+    `;
+
+    // Build condition items for summary
+    const condItems = buildConditionSummary(mode, result.rawInputs, county, result);
+    condItems.forEach(item => allConditionItems.push({ ...item, mode: cfg.label }));
+  });
+
+  // Condition Summary block
+  html += `
+    <div class="condition-summary-wrapper">
+      <button
+        type="button"
+        class="condition-summary-toggle"
+        aria-expanded="false"
+        aria-controls="condition-summary-body"
+        id="condition-summary-btn"
+      >
+        <span>Condition Summary <span style="color:var(--text-hint);font-weight:400;font-size:0.8em;">(${allConditionItems.length} contributing factor${allConditionItems.length !== 1 ? 's' : ''})</span></span>
+        <span class="condition-toggle-icon" aria-hidden="true">▾</span>
+      </button>
+      <div id="condition-summary-body" class="condition-summary-body" hidden>
+        ${allConditionItems.map(item => `
+          <div class="condition-item condition-item--${item.level}">
+            <span class="condition-tag condition-tag--${item.level}">${item.tag}</span>
+            <span class="condition-text">${item.text}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('results-content').innerHTML = html;
+
+  // Wire up condition summary toggle
+  const condBtn = document.getElementById('condition-summary-btn');
+  const condBody = document.getElementById('condition-summary-body');
+  if (condBtn && condBody) {
+    condBtn.addEventListener('click', () => {
+      const expanded = condBtn.getAttribute('aria-expanded') === 'true';
+      condBtn.setAttribute('aria-expanded', String(!expanded));
+      condBody.hidden = expanded;
+    });
   }
-  const skipLink = document.getElementById('skip-to-results');
-  if (skipLink) skipLink.style.display = 'none';
-  document.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
-  const assessor = document.getElementById('assessor-name');
-  if (assessor) assessor.value = '';
-  const notes = document.getElementById('notes');
-  if (notes) notes.value = '';
-  const ad = document.getElementById('assessment-date');
-  if (ad) ad.value = new Date().toISOString().split('T')[0];
-  // Return focus to the top of the form
-  const county = document.getElementById('county');
-  if (county) county.focus();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── PDF EXPORT ───────────────────────────────────────────────
-function exportPDF() {
-  const summary   = document.getElementById('condition-summary');
-  if (!summary) return;
-  const wasHidden = summary.style.display === 'none';
-  summary.style.display = 'block';
-  const origTitle = document.title;
-  document.title  = `OSU Weather Assessment — ${getCountyLabel()} — ${getDateLabel()}`;
-  window.print();
-  document.title  = origTitle;
-  if (wasHidden) summary.style.display = 'none';
+/**
+ * Render a single score card.
+ */
+function renderScoreCard({ key, label, score, subdued }, mode) {
+  const level = scoreToLevel(score);
+  const statusLabel = LEVEL_LABELS[level];
+  const rec = getRecommendation(level, key);
+  const isSubdued = subdued && mode === 'heat';
+  const subduedClass = isSubdued ? ' score-card--subdued' : '';
+
+  const srText = `${label}: ${statusLabel}, score ${score} out of 100. ${rec}`;
+
+  return `
+    <div class="score-card${subduedClass}">
+      <span class="sr-only">${srText}</span>
+      <div class="score-card-category" aria-hidden="true">${label}</div>
+      <div class="score-card-main" aria-hidden="true">
+        <span class="stoplight-dot stoplight-dot--${level}" aria-hidden="true"></span>
+        <span class="score-status score-status--${level}">${statusLabel}</span>
+      </div>
+      <div class="score-number score-number--${level}" aria-hidden="true">${score}</div>
+      <div class="score-out-of" aria-hidden="true">out of 100</div>
+      <div class="score-recommendation" aria-hidden="true">${rec}</div>
+      ${isSubdued ? '<div class="score-subdued-label">Heat has minimal direct impact on road conditions. Score reflects indirect factors only.</div>' : ''}
+    </div>
+  `;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   5. UI BEHAVIOR
+   ═══════════════════════════════════════════════════════════ */
+
+// Track which modes are active
+const activeModes = new Set();
+
+/**
+ * Toggle hazard mode on/off.
+ */
+function toggleMode(mode, btn) {
+  if (activeModes.has(mode)) {
+    activeModes.delete(mode);
+    btn.setAttribute('aria-pressed', 'false');
+    const section = document.getElementById(`inputs-${mode}`);
+    if (section) section.hidden = true;
+  } else {
+    activeModes.add(mode);
+    btn.setAttribute('aria-pressed', 'true');
+    const section = document.getElementById(`inputs-${mode}`);
+    if (section) section.hidden = false;
+  }
+}
+
+/**
+ * Handle the WBGT / Heat Index mutual exclusivity toggle.
+ */
+function initHeatSourceToggle() {
+  const radios = document.querySelectorAll('input[name="heat-source"]');
+  const wbgtGroup = document.getElementById('wbgt-field-group');
+  const hiGroup   = document.getElementById('hi-field-group');
+  const wbgtSel   = document.getElementById('heat-wbgt');
+  const hiSel     = document.getElementById('heat-hi');
+
+  radios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      const useWBGT = radio.value === 'wbgt';
+      // WBGT active
+      wbgtSel.disabled = !useWBGT;
+      wbgtSel.setAttribute('aria-disabled', String(!useWBGT));
+      if (wbgtGroup) wbgtGroup.style.opacity = useWBGT ? '1' : '0.4';
+      // Heat Index active
+      hiSel.disabled = useWBGT;
+      hiSel.setAttribute('aria-disabled', String(useWBGT));
+      if (hiGroup) hiGroup.style.opacity = useWBGT ? '0.4' : '1';
+    });
+  });
+}
+
+/**
+ * Validate that minimum required fields are filled.
+ * Returns null on success, or an error message string.
+ */
+function validate() {
+  const county = document.getElementById('county').value;
+  if (!county) return 'Please select a county before calculating.';
+  if (activeModes.size === 0) return 'Please select at least one hazard mode (Severe Weather, Heat, or Winter Weather) before calculating.';
+  return null;
+}
+
+/**
+ * Calculate button click handler.
+ */
+function handleCalculate() {
+  const errorEl = document.getElementById('calc-error');
+  const error = validate();
+
+  if (error) {
+    errorEl.textContent = error;
+    errorEl.hidden = false;
+    errorEl.focus();
+    return;
+  }
+
+  errorEl.hidden = true;
+  errorEl.textContent = '';
+
+  renderResults([...activeModes]);
+
+  const resultsPanel = document.getElementById('results-panel');
+  resultsPanel.hidden = false;
+  resultsPanel.focus();
+  resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Reset everything to default state.
+ */
+function handleReset() {
+  // Reset form fields
+  document.getElementById('county').value = '';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('assessment-date').value = today;
+  document.getElementById('forecast-period').value = '';
+  document.getElementById('assessor-name').value = '';
+  document.getElementById('forecast-confidence').value = 'high';
+
+  // Clear NWS advisories
+  document.querySelectorAll('input[name="advisory"]').forEach(cb => { cb.checked = false; });
+
+  // Deactivate all hazard modes
+  activeModes.clear();
+  document.querySelectorAll('.hazard-tab').forEach(btn => {
+    btn.setAttribute('aria-pressed', 'false');
+    const mode = btn.dataset.mode;
+    const section = document.getElementById(`inputs-${mode}`);
+    if (section) section.hidden = true;
+  });
+
+  // Reset all hazard input selects and radios to first option
+  document.querySelectorAll('.hazard-inputs select').forEach(sel => { sel.selectedIndex = 0; });
+  document.querySelectorAll('.hazard-inputs input[type="radio"]').forEach(r => {
+    r.checked = r.value === '0';
+  });
+
+  // Reset heat source to WBGT
+  const wbgtRadio = document.getElementById('heat-source-wbgt');
+  if (wbgtRadio) {
+    wbgtRadio.checked = true;
+    wbgtRadio.dispatchEvent(new Event('change'));
+  }
+
+  // Hide results
+  const resultsPanel = document.getElementById('results-panel');
+  resultsPanel.hidden = true;
+  document.getElementById('results-content').innerHTML = '';
+
+  // Hide error
+  const errorEl = document.getElementById('calc-error');
+  errorEl.hidden = true;
+  errorEl.textContent = '';
+
+  // Return focus to county
+  document.getElementById('county').focus();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6. DATA SOURCES PANEL TOGGLE
+   ═══════════════════════════════════════════════════════════ */
+
+function initDataSourcesPanel() {
+  const btn   = document.getElementById('data-sources-btn');
+  const panel = document.getElementById('data-sources-panel');
+  if (!btn || !panel) return;
+
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    panel.hidden = expanded;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. LIVE CLOCK
+   ═══════════════════════════════════════════════════════════ */
+
+function updateClock() {
+  const el = document.getElementById('live-clock');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = now.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   8. PDF EXPORT
+   ═══════════════════════════════════════════════════════════ */
+
+function handleExport() {
+  // Force condition summary open for print
+  const condBody = document.getElementById('condition-summary-body');
+  const condBtn  = document.getElementById('condition-summary-btn');
+  if (condBody) {
+    condBody.hidden = false;
+    if (condBtn) condBtn.setAttribute('aria-expanded', 'true');
+  }
+  window.print();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   9. INIT
+   ═══════════════════════════════════════════════════════════ */
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Set today's date as default
+  const dateInput = document.getElementById('assessment-date');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+
+  // Hazard mode tabs
+  document.querySelectorAll('.hazard-tab').forEach(btn => {
+    btn.addEventListener('click', () => toggleMode(btn.dataset.mode, btn));
+  });
+
+  // Heat source mutual exclusivity
+  initHeatSourceToggle();
+
+  // Calculate button
+  const calcBtn = document.getElementById('calculate-btn');
+  if (calcBtn) calcBtn.addEventListener('click', handleCalculate);
+
+  // Export button (delegate — rendered dynamically)
+  document.addEventListener('click', e => {
+    if (e.target.id === 'export-btn') handleExport();
+    if (e.target.id === 'reset-btn')  handleReset();
+  });
+
+  // Data sources panel
+  initDataSourcesPanel();
+
+  // Live clock — update immediately, then every 30 seconds
+  updateClock();
+  setInterval(updateClock, 30000);
+});

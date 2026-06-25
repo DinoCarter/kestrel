@@ -1,223 +1,175 @@
-# Weather Decision Support Tool
+# Weather Decision Support Tool (WDST) v2.0
 
-A web-based decision aid to evaluate weather risk across university campuses. The tool aggregates forecast inputs into consistent risk scores.
-
-## Overview
-
-The tool scores three risk dimensions from manually entered forecast data:
-
-- **Campus Operations** — informs closure, delayed start, and early release decisions
-- **Outdoor Exposure** — informs decisions about events, tours, and outdoor work
-- **Road & Travel** — informs communication to commuter students and staff
-
-Each score maps to a four-level stoplight (Green / Yellow / Amber / Red) with a plain-English condition summary explaining the contributing factors.
-
-### Disclaimer
-
-This tool supports decision-making. It does not make decisions. Final authority for campus operations and outdoor activity suspension rests with university leadership.
-
-## Development Roadmap
-
-### Near Term
-- **Improved PDF Export** - Generate a clean assessment report including date, assessor, inputs, scores, and condition summary.
-- **Form Validation** - Require critical fields before calculation. Add clear inline error messages for missing or invalid inputs.
-- **Assessment Comparison** - Compare two assessments side by side. Highlight delta.
-
-### Medium Term
-- **Persistent Data Storage** - Store assessments with timestamps, assessor information, inputs, and results. Create a searchable decision history for record-keeping and audits.
-- **User Authentication** - Associate assessments with individual users.
-- **Historical Trends and Reporting** - View assessment history over time. Analyze trends and compare decisions against observed conditions.
-- **Multi-Location Dashboard** - Monitor assessment status across multiple campuses or locations from a single view.
-
-### Long Term
-- **National Weather Service Integration** - Auto-populate weather alerts and watch/warning information.
-- **Mesonet Integration** -  Import weather observations such as temperature, wind, and precipitation.
-
-### Usability Enhancements
-
-- **Seasonal Assessment Modes** - Adjust displayed hazards based on the current season to reduce unnecessary inputs and streamline assessments.
+A browser-based risk scoring tool for standardizing weather-related operational decisions on university campuses in Oklahoma.
 
 ---
 
-## Scoring Methodology
+## What this is (and isn't)
 
-The tool produces three independent scores on a 0–100 scale:
+This is a **decision aid**, not a decision authority. It takes structured weather forecast inputs, runs them through a weighted scoring formula, and produces a 0–100 risk score for three operational categories: Campus Operations, Outdoor Activities, and Roads & Travel.
 
-| Score | What it supports |
-|---|---|
-| **Campus Operations** | Closure, delayed start, early release decisions |
-| **Outdoor Exposure** | Events, tours, outdoor work, gatherings |
-| **Road & Travel** | Commuter notifications, access restrictions |
-
-Each score is calculated by running weather inputs through category sub-scorers, then combining those sub-scores using weighted percentages. The weights reflect how much each hazard type typically drives decisions in that category.
+The scores inform human judgment, they don't make decisions. That distinction is intentional and appears throughout the interface language.
 
 ---
 
-### Stoplight Thresholds
+## How the scoring works
 
-| Score Range | Color | Label | Recommended Posture |
+### The formula
+
+Every score uses the same formula:
+
+```
+Final Score = Σ(Input Raw Score × Weight) / 100
+```
+
+Where:
+- **Input Raw Score** is the point value selected for a given input (see tables below)
+- **Weight** is that input's percentage contribution to the specific score type
+
+Scores are capped at 100, floored at 0, and rounded to the nearest integer.
+
+**Example:** A severe weather assessment with >1.5" rain (100 pts), large hail (100 pts), and lightning (100 pts), everything else at zero:
+
+```
+Campus Operations = (100×15 + 100×15 + 100×5) / 100
+                  = (1500 + 1500 + 500) / 100
+                  = 35 → "Elevated Caution"
+```
+
+---
+
+### Severe Weather inputs and raw scores
+
+| Input | 0 pts | Option 1 | Option 2 | Option 3 | Option 4 |
+|---|---|---|---|---|---|
+| Rain | None | 0.01–0.75": 33 | 0.75–1.5": 67 | >1.5": 100 | — |
+| Hail | None | <1" diameter: 50 | ≥1" diameter: 100 | — | — |
+| Lightning | No: 0 | Yes: 100 | — | — | — |
+| Sustained Wind | <20 mph: 0 | 20–30 mph: 25 | 30–40 mph: 50 | 40–50 mph: 75 | >50 mph: 100 |
+| Max Wind Gust | <30 mph: 0 | 30–40 mph: 25 | 40–50 mph: 50 | 50–60 mph: 75 | >60 mph: 100 |
+| Flash Flood | No: 0 | Yes: 100 | — | — | — |
+| Tornado Possible | No: 0 | Yes: 100 | — | — | — |
+
+### Severe Weather score weights (%)
+
+| Input | Campus Ops | Outdoor Activities | Roads & Travel |
 |---|---|---|---|
-| 0 – 24 | Green | Normal Operations | No weather-based action needed |
-| 25 – 49 | Yellow | Elevated Caution | Increase monitoring and notify decision makers |
-| 50 – 74 | Amber | High Risk | Evaluate delays, modifications, or contingency activation |
-| 75 – 100 | Red | Severe Risk | Evaluate closure, cancellation, or emergency procedures |
+| Rain | 15 | 20 | 20 |
+| Hail | 15 | 15 | 15 |
+| Lightning | 5 | 20 | 5 |
+| Sustained Wind | 20 | 10 | 5 |
+| Max Wind Gust | 20 | 10 | 15 |
+| Flash Flood | 5 | 5 | 20 |
+| Tornado Possible | 20 | 20 | 20 |
+| **Total** | **100** | **100** | **100** |
 
 ---
 
-### Bypass Conditions
+### Heat inputs and raw scores
 
-Two conditions bypass scoring entirely and force a score to Red regardless of other inputs:
-
-| Condition | Effect |
-|---|---|
-| Tornado Warning / PDS / Emergency in effect | Campus Operations and Outdoor Exposure both forced to 100 (Red) |
-| Active lightning within 8 miles | Outdoor Exposure forced to 100 (Red) |
-
----
-
-### Category Sub-Scorers
-
-Each hazard category produces a sub-score from 0 to 100. These sub-scores are then combined using the weights in the next section.
-
-#### Severe Weather
-
-| Input | None | Low | Moderate | High |
+| Input | 0 pts | Option 1 | Option 2 | Option 3 |
 |---|---|---|---|---|
-| NWS Alert Level | 0 pts | Statement: 10 / Advisory: 20 | Watch: 40 | Warning: 60 / Tornado PDS: 90 |
-| Tornado Watch | 0 pts | — | Tornado Watch: +20 | PDS Watch: +35 |
-| Hail Threat | 0 pts | Small (<1"): +10 | Large (≥1"): +20 | — |
+| WBGT | <82.0°F: 0 | 82.0–86.9°F: 33 | 87.0–89.9°F: 67 | ≥90.0°F: 100 |
+| Heat Index | <90°F: 0 | 90–100°F: 33 | 100–108°F: 67 | >108°F: 100 |
+| Sustained Wind | <20 mph: 0 | 20–30 mph: 25 | 30–40 mph: 50 | >40 mph: 75 |
 
-#### Flood Hazard
+**WBGT and Heat Index are mutually exclusive.** When WBGT data is available, use it — it's the more comprehensive measure. When WBGT isn't available, use Heat Index. The tool handles this with a radio toggle that greys out the inactive field.
 
-| Input | Points |
-|---|---|
-| None | 0 |
-| Localized nuisance flooding possible | 35 |
-| Flash Flood Watch | 70 |
-| Flash Flood Warning | 100 |
+### Heat score weights (%)
 
-#### Winter Hazards
+| Input | Campus Ops | Outdoor Activities | Roads & Travel |
+|---|---|---|---|
+| WBGT or Heat Index | 80 | 80 | 10 |
+| Sustained Wind | 20 | 20 | 10 |
+| **Total** | **100** | **100** | **100** |
 
-| Input | None | Tier 1 | Tier 2 | Tier 3 | Max Contribution |
+**A note on the Roads & Travel heat score:** The remaining 80% of weight for Roads has no applicable input in heat mode. Heat just doesn't have a meaningful operational impact on road surfaces or travel safety the way ice does. So the Roads & Travel score in Heat mode will always be low (maximum theoretical score is 20/100).
+
+---
+
+### Winter Weather inputs and raw scores
+
+| Input | 0 pts | Option 1 | Option 2 | Option 3 | Option 4 |
 |---|---|---|---|---|---|
-| Ice Accumulation | 0 | Trace–0.10": 13 | 0.10–0.25": 27 | >0.25": 40 | 40 pts |
-| Snow Accumulation | 0 | 1–3": 7 | 3–6": 13 | >6": 20 | 20 pts |
-| Wind Chill | 0 | 0–20°F: 7 | -10–0°F: 13 | <-10°F: 20 | 20 pts |
-| Precipitation Type | 0 | Rain+Wind: 3 | Freezing Drizzle: 8 | Freezing Rain: 11 / Sleet-Ice: 15 | 15 pts |
-| Freeze-Thaw Cycle | 0 | — | Yes: +10 | — | 10 pts |
+| Ice Accumulation | None: 0 | Trace–0.10": 33 | 0.10–0.25": 67 | >0.25": 100 | — |
+| Snow Accumulation | None: 0 | 1–3": 33 | 3–6": 67 | >6": 100 | — |
+| Wind Chill | >32°F: 0 | 20–32°F: 25 | 10–20°F: 50 | 0–10°F: 75 | <0°F: 100 |
+| Max Wind Gust | <30 mph: 0 | 30–40 mph: 25 | 40–50 mph: 50 | 50–60 mph: 75 | >60 mph: 100 |
+| Freeze-Thaw Cycle | No: 0 | Yes: 100 | — | — | — |
 
-Note: Ice accumulation carries the most weight because it is the primary campus closure driver in Oklahoma historically.
+### Winter Weather score weights (%)
 
-Precipitation type scoring reflects the relative severity of each type:
+| Input | Campus Ops | Outdoor Activities | Roads & Travel |
+|---|---|---|---|
+| Ice Accumulation | 50 | 20 | 40 |
+| Snow Accumulation | 20 | 20 | 20 |
+| Wind Chill | 10 | 30 | 5 |
+| Max Wind Gust | 5 | 20 | 15 |
+| Freeze-Thaw Cycle | 15 | 10 | 20 |
+| **Total** | **100** | **100** | **100** |
 
-| Precipitation Type | Raw Score | Rationale |
+---
+
+### Stoplight bands
+
+| Score | Level | Label |
 |---|---|---|
-| None / Rain only | 0 | No winter hazard |
-| Rain + gusty wind | 20 | Hazardous but not frozen |
-| Freezing drizzle | 50 | Invisible accumulation; high black ice risk |
-| Freezing rain | 75 | Visible accumulation on all surfaces |
-| Sleet / ice mix | 100 | Most operationally disruptive combination |
-
-#### Heat Hazards
-
-If Wet Bulb Globe Temperature (WBGT) is entered, it overrides Heat Index in the calculation. WBGT is the preferred measure.
-
-**WBGT:**
-
-| WBGT Range | Sub-score |
-|---|---|
-| Below 80°F | 0 |
-| 80°F – 85°F | 33 |
-| 85°F – 90°F | 67 |
-| Above 90°F | 100 |
-
-**Heat Index (when WBGT is not available):**
-
-| Heat Index Range | Sub-score |
-|---|---|
-| Below 90°F | 0 |
-| 90°F – 100°F (Caution) | 33 |
-| 100°F – 108°F (Danger) | 67 |
-| Above 108°F (Extreme Danger) | 100 |
-
-#### Wind
-
-| Input | None | Tier 1 | Tier 2 | Tier 3 | Max Contribution |
-|---|---|---|---|---|---|
-| Sustained Wind | <20 mph: 0 | 20–35 mph: 20 | 35–50 mph: 40 | >50 mph: 60 | 60 pts |
-| Gusts | <30 mph: 0 | 30–45 mph: 13 | 45–60 mph: 27 | >60 mph: 40 | 40 pts |
-
-#### Road & Travel
-
-Travel is a standalone score. Flood contributes directly to it in addition to through the category weights.
-
-| Input | None | Tier 1 | Tier 2 | Tier 3 | Max Contribution |
-|---|---|---|---|---|---|
-| Road Conditions | Clear: 0 | Wet: 13 | Patchy ice: 27 | Widespread ice: 40 | 40 pts |
-| ODOT Advisory | None: 0 | Advisory: 10 | Warning: 20 | Travel Ban: 30 | 30 pts |
-| Visibility | Normal: 0 | <1 mile: 7 | <¼ mile: 13 | Near-zero: 20 | 20 pts |
-| Campus Walkways | Clear: 0 | Wet: 3 | Icy patches: 7 | Widespread ice: 10 | 10 pts |
-| Flood (direct) | 0 | 7 | 14 | 20 | 20 pts (20% of flood sub-score) |
+| 0–24 | 🟢 Green | Normal Operations |
+| 25–49 | 🟡 Yellow | Elevated Caution |
+| 50–74 | 🟠 Amber | High Risk |
+| 75–100 | 🔴 Red | Severe Risk |
 
 ---
 
-### Final Score Composition
+## Multi-mode assessments
 
-#### Campus Operations
+You can activate multiple hazard modes simultaneously. Each mode produces a completely independent set of three scores. Scores from different modes are never combined, averaged, or otherwise mixed. If you have both Severe Weather and Winter Weather active, you get six score cards.
 
-| Category | Weight |
+---
+
+## Condition Summary
+
+After calculation, the Condition Summary provides plain-English explanations of each input that's contributing to the scores (any input with a raw score > 0).
+
+Each condition item includes:
+- A color-coded border and background matching the risk level of that input
+- A category tag
+- An action-oriented description referencing the relevant NWS threshold where applicable
+
+The summary is collapsed by default in the UI (to keep the score cards prominent) but always expands in the PDF export.
+
+---
+
+## PDF export
+
+The Export Assessment as PDF button opens the browser's native print dialog with print-optimized CSS applied. The exported record includes all context fields, active advisories (checked items only), all input values, all scores, the full Condition Summary (force-expanded), and the disclaimer.
+
+Stoplight indicators render as white fill with colored borders in print — solid color fills can fail in black-and-white printing environments, and this ensures the level difference remains visible.
+
+---
+
+## Roadmap
+
+The following featues or elements are planned for future versions:
+
+- NWS API integration
+- User authentication with role-based access
+- Server-side assessment database with full history
+- Searchable decision log linking assessments to actual operational decisions
+- Multi-campus dashboard (all counties at once)
+- Seasonal mode presets (hide irrelevant modes, adjust weights)
+- Native mobile app (iOS/Android) with push notifications
+
+---
+
+## Version history
+
+| Version | Notes |
 |---|---|
-| Severe Weather | 45% |
-| Winter Hazards | 20% |
-| Flood Hazard | 20% |
-| Heat Hazards | 5% |
-| Wind | 10% |
-
-#### Outdoor Exposure
-
-Base weights (no outdoor event):
-
-| Category | Weight |
-|---|---|
-| Severe Weather | 40% |
-| Winter Hazards | 15% |
-| Flood Hazard | 5% |
-| Heat Hazards | 25% |
-| Wind | 15% |
-
-##### Outdoor Exposure — Event Modifier
-
-When a major outdoor event is scheduled, the weights shift to reflect that large assembled crowds face greater exposure to real-time hazards (severe weather, heat, wind) than to accumulation-style hazards (winter ice, flooding). The weight shift also scales with estimated attendance.
-
-| Attendance | Severe | Winter | Flood | Heat | Wind |
-|---|---|---|---|---|---|
-| No event (base) | 40% | 15% | 5% | 25% | 15% |
-| Fewer than 100 | 42% | 12% | 3% | 27% | 16% |
-| 100 – 1,000 | 45% | 7% | 2% | 29% | 17% |
-| 1,000 – 5,000 | 48% | 2% | 1% | 31% | 18% |
-| 5,000+ | 50% | 0% | 0% | 33% | 17% |
-
-All rows sum to 100%. The modifier only affects the Outdoor Exposure score — Campus Operations and Travel weights are unchanged.
-
-#### Road & Travel
-
-Travel is calculated directly from its sub-scorer (see Travel section above) and is not composed from category weights. It stands alone.
+| 2.0 | Full shift to predicition based tool with no support for current weather condition risk calculations. Three hazard modes (Severe, Heat, Winter). Multi-mode simultaneous assessment. |
+| 1.x | Initial prototype and proof of concept. |
 
 ---
 
-## Forecast Confidence
-
-Forecast confidence (Low / Moderate / High) is entered by the assessor and displayed in the results header and condition summary. It does not alter any scores.
-
-ts purpose is to flag to decision makers whether the underlying forecast data is well-established or subject to significant change before the assessment window.
-
----
-
-## What the scores do not account for
-
-- **Campus-specific infrastructure** — the tool does not know whether a specific building has been pre-treated, which walkways are sheltered, or which parking lots drain poorly.
-- **Population vulnerability** — it does not account for the specific composition of who is on campus (e.g., a large population of international students unfamiliar with Oklahoma tornado procedures, or a disability services event).
-- **Forecast error** — all inputs are only as accurate as the forecast data entered.
-- **Real-time evolution** — the tool is designed for day-before predictive use. Conditions that evolve rapidly on the day of may require reassessment with updated inputs.
-
----
+*This tool is not an official university policy, emergency operations plan, or legally binding decision framework.*
+*Final authority for all campus operational decisions rests with authorized leadership.*
