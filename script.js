@@ -134,7 +134,7 @@ function calcScoreByType(inputs, mode, type) {
  * WBGT and Heat Index are mutually exclusive.
  */
 function calcHeatScores() {
-  const useWBGT = document.querySelector('input[name="heat-source"]:checked').value === 'wbgt';
+  const useWBGT = getHeatSourceSelection() === 'wbgt';
   const heatStress = useWBGT
     ? getSelectVal('heat-wbgt')
     : getSelectVal('heat-hi');
@@ -350,6 +350,12 @@ function formatDateTime(d) {
   });
 }
 
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 /* ═══════════════════════════════════════════════════════════
    4. RESULTS RENDERER
    ═══════════════════════════════════════════════════════════ */
@@ -372,8 +378,13 @@ function renderResults(activeModes) {
   // Build meta line
   const metaParts = [countyName(county)];
   if (assessDate) metaParts.push(`Assessment date: ${assessDate}`);
-  if (forecastPer) metaParts.push(`Forecast period: ${forecastPer}`);
-  if (assessor) metaParts.push(`Assessor: ${assessor}`);
+ if (forecastPer) {
+  metaParts.push(`Forecast period: ${escapeHtml(forecastPer)}`);
+}
+
+if (assessor) {
+  metaParts.push(`Assessor: ${escapeHtml(assessor)}`);
+}
   metaParts.push(`Generated: ${calcTime}`);
 
   const confidenceLabels = { high: 'High Confidence', moderate: 'Moderate Confidence', low: 'Low Confidence' };
@@ -410,7 +421,7 @@ function renderResults(activeModes) {
   const allConditionItems = [];
 
   modeOrder.forEach(mode => {
-    if (!activeModes.includes(mode)) return;
+    if (!activeModes.has(mode)) return;
     const cfg = modeConfig[mode];
     const result = cfg.calcFn();
     const categories = [
@@ -523,29 +534,42 @@ function toggleMode(mode, btn) {
   }
 }
 
-/**
- * Handle the WBGT / Heat Index mutual exclusivity toggle.
- */
-function initHeatSourceToggle() {
-  const radios = document.querySelectorAll('input[name="heat-source"]');
+function getHeatSourceSelection() {
+  const checked = document.querySelector('input[name="heat-source"]:checked');
+  return checked ? checked.value : 'wbgt';
+}
+
+function setHeatSourceUI(useWBGT) {
   const wbgtGroup = document.getElementById('wbgt-field-group');
   const hiGroup   = document.getElementById('hi-field-group');
   const wbgtSel   = document.getElementById('heat-wbgt');
   const hiSel     = document.getElementById('heat-hi');
 
+  if (wbgtSel) {
+    wbgtSel.disabled = !useWBGT;
+    wbgtSel.setAttribute('aria-disabled', String(!useWBGT));
+  }
+  if (hiSel) {
+    hiSel.disabled = useWBGT;
+    hiSel.setAttribute('aria-disabled', String(useWBGT));
+  }
+  if (wbgtGroup) wbgtGroup.style.opacity = useWBGT ? '1' : '0.4';
+  if (hiGroup) hiGroup.style.opacity = useWBGT ? '0.4' : '1';
+}
+
+/**
+ * Handle the WBGT / Heat Index mutual exclusivity toggle.
+ */
+function initHeatSourceToggle() {
+  const radios = document.querySelectorAll('input[name="heat-source"]');
+
   radios.forEach(radio => {
     radio.addEventListener('change', () => {
-      const useWBGT = radio.value === 'wbgt';
-      // WBGT active
-      wbgtSel.disabled = !useWBGT;
-      wbgtSel.setAttribute('aria-disabled', String(!useWBGT));
-      if (wbgtGroup) wbgtGroup.style.opacity = useWBGT ? '1' : '0.4';
-      // Heat Index active
-      hiSel.disabled = useWBGT;
-      hiSel.setAttribute('aria-disabled', String(useWBGT));
-      if (hiGroup) hiGroup.style.opacity = useWBGT ? '0.4' : '1';
+      setHeatSourceUI(radio.value === 'wbgt');
     });
   });
+
+  setHeatSourceUI(getHeatSourceSelection() === 'wbgt');
 }
 
 /**
