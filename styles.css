@@ -934,6 +934,14 @@ input:disabled {
   z-index: 9999;
 }
 
+.beta-modal[hidden] {
+  display: none !important;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
 .beta-modal__content {
   width: min(700px, 100%);
   background: var(--bg-card);

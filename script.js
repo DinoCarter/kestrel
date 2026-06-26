@@ -719,13 +719,28 @@ function initBetaModal() {
 
   if (!modal || !closeBtn) return;
 
-  closeBtn.focus();
-
-  closeBtn.addEventListener('click', () => {
+  const closeModal = () => {
     modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
 
     const countySelect = document.getElementById('county');
     if (countySelect) countySelect.focus();
+  };
+
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+  closeBtn.focus();
+
+  closeBtn.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', event => {
+    if (event.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', event => {
+    if (!modal.hidden && event.key === 'Escape') closeModal();
   });
 }
 
