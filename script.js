@@ -777,12 +777,11 @@ function handleExport() {
   const checkedAdvisories = [...document.querySelectorAll('input[name="advisory"]:checked')]
     .map(el => el.value);
 
-  // Mode config (same order as screen)
   const modeOrder = ['severe', 'heat', 'winter'];
   const modeConfig = {
     severe: { label: 'Severe Weather', icon: '⛈', calcFn: calcSevereScores },
-    heat:   { label: 'Heat',           icon: '☀', calcFn: calcHeatScores   },
-    winter: { label: 'Winter Weather', icon: '❄', calcFn: calcWinterScores },
+    heat:   { label: 'Heat',           icon: '☀',  calcFn: calcHeatScores   },
+    winter: { label: 'Winter Weather', icon: '❄',  calcFn: calcWinterScores },
   };
   const categories = [
     { key: 'campus',  label: 'Campus Operations' },
@@ -790,7 +789,7 @@ function handleExport() {
     { key: 'roads',   label: 'Roads & Travel'     },
   ];
 
-  // Advisory bar HTML
+  // Advisory bar
   const advisoryBarHTML = checkedAdvisories.length > 0 ? `
     <div class="rpt-advisory-bar">
       <span class="rpt-advisory-label">Active NWS Advisories</span>
@@ -805,7 +804,6 @@ function handleExport() {
     const result = cfg.calcFn();
     const abbrConds = buildAbbrConditions(mode, result.rawInputs, county, result);
 
-    // Score cells
     const scoreCellsHTML = categories.map(cat => {
       const score   = result[cat.key];
       const level   = scoreToLevel(score);
@@ -828,7 +826,6 @@ function handleExport() {
         </div>`;
     }).join('');
 
-    // Condition rows
     const condRowsHTML = abbrConds.length > 0 ? `
       <div class="rpt-conditions">
         <div class="rpt-conditions-heading">Contributing Factors</div>
@@ -851,77 +848,148 @@ function handleExport() {
       </div>`;
   });
 
-  // Assemble full report
-  const reportHTML = `
-    <div id="print-report-root">
-      <div class="rpt-header">
-        <div class="rpt-header-logo"></div>
-        <div class="rpt-header-body">
-          <div class="rpt-header-org">Oklahoma State University — Office of Emergency Management</div>
-          <div class="rpt-header-title">Weather Risk Assessment</div>
-          <div class="rpt-header-sub">${countyLabel} &nbsp;·&nbsp; Forecast Period: ${forecastPer}</div>
-        </div>
-        <div class="rpt-header-meta">
-          <div class="rpt-meta-row">Date: <strong>${assessDate}</strong></div>
-          <div class="rpt-meta-row">Assessor: <strong>${assessor}</strong></div>
-          <div class="rpt-meta-row">Generated: <strong>${calcTime}</strong></div>
-          <div class="rpt-meta-row" style="margin-top:3pt;"><span class="rpt-conf-badge">${confLabel}</span></div>
-        </div>
-      </div>
+  // All report styles inlined — completely self-contained, no dependency on styles.css
+  const reportStyles = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #000;
+      background: #fff;
+      padding: 0.45in 0.5in 0.4in;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page { size: letter portrait; margin: 0; }
 
-      <div class="rpt-infobar">
-        <div class="rpt-infobar-cell">
-          <div class="rpt-info-label">County</div>
-          <div class="rpt-info-value">${countyLabel}</div>
-        </div>
-        <div class="rpt-infobar-cell">
-          <div class="rpt-info-label">Assessment Date</div>
-          <div class="rpt-info-value">${assessDate}</div>
-        </div>
-        <div class="rpt-infobar-cell">
-          <div class="rpt-info-label">Forecast Period</div>
-          <div class="rpt-info-value">${forecastPer}</div>
-        </div>
-        <div class="rpt-infobar-cell">
-          <div class="rpt-info-label">Assessor</div>
-          <div class="rpt-info-value">${assessor}</div>
-        </div>
-        <div class="rpt-infobar-cell">
-          <div class="rpt-info-label">Confidence</div>
-          <div class="rpt-info-value">${confLabel}</div>
-        </div>
-      </div>
+    /* Header */
+    .rpt-header { display: flex; align-items: stretch; border-bottom: 3pt solid #000; margin-bottom: 7pt; padding-bottom: 6pt; }
+    .rpt-header-logo { width: 6pt; background: #000; margin-right: 8pt; flex-shrink: 0; }
+    .rpt-header-body { flex: 1; }
+    .rpt-header-org { font-size: 6.5pt; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #555; margin-bottom: 1pt; }
+    .rpt-header-title { font-size: 14pt; font-weight: 800; color: #000; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 2pt; }
+    .rpt-header-sub { font-size: 7pt; color: #444; line-height: 1.5; }
+    .rpt-header-meta { text-align: right; display: flex; flex-direction: column; justify-content: flex-end; gap: 2pt; min-width: 130pt; }
+    .rpt-meta-row { font-size: 6.5pt; color: #555; line-height: 1.4; }
+    .rpt-meta-row strong { color: #000; font-weight: 700; }
+    .rpt-conf-badge { display: inline-block; font-size: 6pt; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 1pt 4pt; border: 1pt solid #000; border-radius: 2pt; margin-top: 3pt; }
 
-      ${advisoryBarHTML}
+    /* Info bar */
+    .rpt-infobar { display: flex; align-items: stretch; border: 1pt solid #ccc; border-left: 3pt solid #000; margin-bottom: 7pt; background: #f8f8f8; }
+    .rpt-infobar-cell { flex: 1; padding: 4pt 7pt; border-right: 1pt solid #ddd; }
+    .rpt-infobar-cell:last-child { border-right: none; }
+    .rpt-info-label { font-size: 5.5pt; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #777; margin-bottom: 1.5pt; }
+    .rpt-info-value { font-size: 7.5pt; font-weight: 600; color: #000; line-height: 1.3; }
 
-      ${modeSectionsHTML}
+    /* Advisory bar */
+    .rpt-advisory-bar { display: flex; align-items: baseline; gap: 5pt; border: 1pt solid #999; border-left: 3pt solid #000; background: #f0f0f0; padding: 3.5pt 7pt; margin-bottom: 7pt; flex-wrap: wrap; }
+    .rpt-advisory-label { font-size: 6pt; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #333; white-space: nowrap; }
+    .rpt-advisory-pill { font-size: 6.5pt; font-weight: 600; color: #000; background: #fff; border: 0.5pt solid #aaa; padding: 0.5pt 4pt; border-radius: 2pt; }
 
-      <div class="rpt-footer">
-        <div class="rpt-disclaimer">
-          <strong>Decision Support Only.</strong> This tool provides structured risk scores to inform human judgment. Scores are based on forecast inputs and do not constitute an official university policy, emergency directive, or operational order. Final authority rests with authorized Oklahoma State University leadership. Forecasts are subject to change — reassess as conditions evolve.
-        </div>
-        <div class="rpt-footer-right">WDST v2.0 &nbsp;|&nbsp; For Internal Use Only</div>
-      </div>
-    </div>
+    /* Mode section */
+    .rpt-mode-section { border: 1pt solid #ccc; margin-bottom: 6pt; page-break-inside: avoid; }
+    .rpt-mode-header { display: flex; align-items: center; justify-content: space-between; background: #000; color: #fff; padding: 3.5pt 8pt; }
+    .rpt-mode-title { font-size: 7.5pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; }
+    .rpt-mode-subtitle { font-size: 6pt; color: rgba(255,255,255,0.65); letter-spacing: 0.04em; }
+
+    /* Score table */
+    .rpt-score-table { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1pt solid #ddd; }
+    .rpt-score-cell { padding: 6pt 8pt; border-right: 1pt solid #e8e8e8; }
+    .rpt-score-cell:last-child { border-right: none; }
+    .rpt-score-cell--subdued { background: #fafafa; opacity: 0.7; }
+    .rpt-score-cat { font-size: 6pt; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin-bottom: 4pt; }
+    .rpt-score-level-row { display: flex; align-items: center; gap: 4pt; margin-bottom: 3pt; }
+    .rpt-risk-bar { width: 3pt; height: 22pt; border-radius: 1pt; flex-shrink: 0; }
+    .rpt-risk-bar--green  { background: #2E7D32; }
+    .rpt-risk-bar--yellow { background: #c8900a; }
+    .rpt-risk-bar--amber  { background: #E65100; }
+    .rpt-risk-bar--red    { background: #B71C1C; }
+    .rpt-score-num-block { display: flex; flex-direction: column; }
+    .rpt-score-num { font-size: 22pt; font-weight: 800; line-height: 1; color: #000; }
+    .rpt-score-outof { font-size: 6pt; color: #888; }
+    .rpt-score-status { font-size: 7.5pt; font-weight: 700; color: #000; margin-bottom: 3pt; }
+    .rpt-score-rec { font-size: 6.5pt; color: #333; line-height: 1.4; border-top: 0.5pt solid #e0e0e0; padding-top: 3pt; margin-top: 1pt; }
+    .rpt-subdued-note { font-size: 5.5pt; font-style: italic; color: #999; margin-top: 2pt; }
+
+    /* Conditions */
+    .rpt-conditions { padding: 4pt 8pt 5pt; }
+    .rpt-conditions-heading { font-size: 5.5pt; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #888; margin-bottom: 3pt; border-bottom: 0.5pt solid #e8e8e8; padding-bottom: 2pt; }
+    .rpt-condition-row { display: flex; align-items: baseline; gap: 5pt; padding: 2pt 0; border-bottom: 0.5pt solid #f0f0f0; }
+    .rpt-condition-row:last-child { border-bottom: none; }
+    .rpt-cond-indicator { width: 5pt; height: 5pt; border-radius: 50%; flex-shrink: 0; margin-top: 1pt; }
+    .rpt-cond-indicator--green  { background: #2E7D32; }
+    .rpt-cond-indicator--yellow { background: #c8900a; }
+    .rpt-cond-indicator--amber  { background: #E65100; }
+    .rpt-cond-indicator--red    { background: #B71C1C; }
+    .rpt-cond-tag { font-size: 6pt; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; min-width: 80pt; color: #000; }
+    .rpt-cond-text { font-size: 7pt; color: #222; line-height: 1.35; }
+
+    /* Footer */
+    .rpt-footer { margin-top: 6pt; padding-top: 5pt; border-top: 0.5pt solid #ccc; display: flex; justify-content: space-between; align-items: flex-start; gap: 12pt; }
+    .rpt-disclaimer { font-size: 5.5pt; color: #666; line-height: 1.45; flex: 1; }
+    .rpt-footer-right { font-size: 5.5pt; color: #999; text-align: right; white-space: nowrap; }
   `;
 
-  // Inject report root into body — hidden on screen, visible only at print
-  const reportRoot = document.createElement('div');
-  reportRoot.id = 'print-report-root-wrapper';
-  reportRoot.style.display = 'none';
-  reportRoot.innerHTML = reportHTML;
-  document.body.appendChild(reportRoot);
+  // Full self-contained HTML document
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Weather Risk Assessment — ${countyLabel}</title>
+  <style>${reportStyles}</style>
+</head>
+<body>
+  <div class="rpt-header">
+    <div class="rpt-header-logo"></div>
+    <div class="rpt-header-body">
+      <div class="rpt-header-org">Oklahoma State University — Office of Emergency Management</div>
+      <div class="rpt-header-title">Weather Risk Assessment</div>
+      <div class="rpt-header-sub">${countyLabel} &nbsp;&middot;&nbsp; Forecast Period: ${forecastPer}</div>
+    </div>
+    <div class="rpt-header-meta">
+      <div class="rpt-meta-row">Date: <strong>${assessDate}</strong></div>
+      <div class="rpt-meta-row">Assessor: <strong>${assessor}</strong></div>
+      <div class="rpt-meta-row">Generated: <strong>${calcTime}</strong></div>
+      <div class="rpt-meta-row"><span class="rpt-conf-badge">${confLabel}</span></div>
+    </div>
+  </div>
 
-  // Print
-  window.print();
+  <div class="rpt-infobar">
+    <div class="rpt-infobar-cell"><div class="rpt-info-label">County</div><div class="rpt-info-value">${countyLabel}</div></div>
+    <div class="rpt-infobar-cell"><div class="rpt-info-label">Assessment Date</div><div class="rpt-info-value">${assessDate}</div></div>
+    <div class="rpt-infobar-cell"><div class="rpt-info-label">Forecast Period</div><div class="rpt-info-value">${forecastPer}</div></div>
+    <div class="rpt-infobar-cell"><div class="rpt-info-label">Assessor</div><div class="rpt-info-value">${assessor}</div></div>
+    <div class="rpt-infobar-cell"><div class="rpt-info-label">Confidence</div><div class="rpt-info-value">${confLabel}</div></div>
+  </div>
 
-  // Clean up
-  const cleanup = () => {
-    const el = document.getElementById('print-report-root-wrapper');
-    if (el) el.remove();
+  ${advisoryBarHTML}
+  ${modeSectionsHTML}
+
+  <div class="rpt-footer">
+    <div class="rpt-disclaimer"><strong>Decision Support Only.</strong> This tool provides structured risk scores to inform human judgment. Scores are based on forecast inputs and do not constitute an official university policy, emergency directive, or operational order. Final authority rests with authorized Oklahoma State University leadership. Forecasts are subject to change — reassess as conditions evolve.</div>
+    <div class="rpt-footer-right">WDST v2.0 &nbsp;|&nbsp; For Internal Use Only</div>
+  </div>
+</body>
+</html>`;
+
+  // Open in new window and print
+  const printWin = window.open('', '_blank', 'width=850,height=1100');
+  if (!printWin) {
+    alert('Pop-up blocked. Please allow pop-ups for this page to export the report.');
+    return;
+  }
+  printWin.document.open();
+  printWin.document.write(fullHTML);
+  printWin.document.close();
+
+  // Wait for content to render before printing
+  printWin.onload = () => {
+    printWin.focus();
+    printWin.print();
+    printWin.onafterprint = () => printWin.close();
+    // Fallback close if onafterprint doesn't fire
+    setTimeout(() => { if (!printWin.closed) printWin.close(); }, 4000);
   };
-  window.addEventListener('afterprint', cleanup, { once: true });
-  setTimeout(cleanup, 3000);
 }
 
 /* ═══════════════════════════════════════════════════════════
