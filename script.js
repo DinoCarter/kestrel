@@ -23,48 +23,48 @@ const LOCATIONS = {
 
 const WEIGHTS = {
   severe: {
-    rain:      { campus: 15, outdoor: 20, roads: 20 },
-    hail:      { campus: 15, outdoor: 15, roads: 15 },
-    lightning: { campus:  5, outdoor: 20, roads:  5 },
-    windSust:  { campus: 20, outdoor: 10, roads:  5 },
-    windGust:  { campus: 20, outdoor: 10, roads: 15 },
-    flood:     { campus:  5, outdoor:  5, roads: 20 },
-    tornado:   { campus: 20, outdoor: 20, roads: 20 },
+    rain:      { facility: 15, outdoor: 20, roads: 20 },
+    hail:      { facility: 15, outdoor: 15, roads: 15 },
+    lightning: { facility:  5, outdoor: 20, roads:  5 },
+    windSust:  { facility: 20, outdoor: 10, roads:  5 },
+    windGust:  { facility: 20, outdoor: 10, roads: 15 },
+    flood:     { facility:  5, outdoor:  5, roads: 20 },
+    tornado:   { facility: 20, outdoor: 20, roads: 20 },
   },
   heat: {
-    heatStress: { campus: 80, outdoor: 80, roads: 10 },
-    windSust:   { campus: 20, outdoor: 20, roads: 10 },
+    heatStress: { facility: 80, outdoor: 80, roads: 10 },
+    windSust:   { facility: 20, outdoor: 20, roads: 10 },
   },
   winter: {
-    ice:        { campus: 50, outdoor: 20, roads: 40 },
-    snow:       { campus: 20, outdoor: 20, roads: 20 },
-    windChill:  { campus: 10, outdoor: 30, roads:  5 },
-    windGust:   { campus:  5, outdoor: 20, roads: 15 },
-    freezeThaw: { campus: 15, outdoor: 10, roads: 20 },
+    ice:        { facility: 50, outdoor: 20, roads: 40 },
+    snow:       { facility: 20, outdoor: 20, roads: 20 },
+    windChill:  { facility: 10, outdoor: 30, roads:  5 },
+    windGust:   { facility:  5, outdoor: 20, roads: 15 },
+    freezeThaw: { facility: 15, outdoor: 10, roads: 20 },
   },
 };
 
 function getRecommendation(level, category) {
   const recs = {
     green: {
-      campus:  'No weather-based action needed. Continue standard monitoring.',
-      outdoor: 'No weather-based action needed. Continue standard monitoring.',
-      roads:   'No weather-based action needed. Continue standard monitoring.',
+      facility: 'No weather-based action needed. Continue standard monitoring.',
+      outdoor:  'No weather-based action needed. Continue standard monitoring.',
+      roads:    'No weather-based action needed. Continue standard monitoring.',
     },
     yellow: {
-      campus:  'Increase monitoring frequency. Notify decision makers. Begin contingency planning.',
-      outdoor: 'Increase monitoring frequency. Notify decision makers. Consider event modifications.',
-      roads:   'Increase monitoring frequency. Notify travel coordinators. Begin contingency planning.',
+      facility: 'Increase monitoring frequency. Notify decision makers. Begin contingency planning.',
+      outdoor:  'Increase monitoring frequency. Notify decision makers. Consider event modifications.',
+      roads:    'Increase monitoring frequency. Notify travel coordinators. Begin contingency planning.',
     },
     amber: {
-      campus:  'Evaluate operational delays or modifications. Earlier decision points advised.',
-      outdoor: 'Evaluate delays, modifications, or contingency activation. Earlier decision points advised.',
-      roads:   'Evaluate travel restrictions or route modifications. Contingency activation advised.',
+      facility: 'Evaluate operational delays or modifications. Earlier decision points advised.',
+      outdoor:  'Evaluate delays, modifications, or contingency activation. Earlier decision points advised.',
+      roads:    'Evaluate travel restrictions or route modifications. Contingency activation advised.',
     },
     red: {
-      campus:  'Evaluate closure or emergency procedures. Immediate action may be required.',
-      outdoor: 'Evaluate cancellation or emergency procedures. Immediate action may be required.',
-      roads:   'Evaluate travel restriction or emergency procedures. Immediate action may be required.',
+      facility: 'Evaluate closure or emergency procedures. Immediate action may be required.',
+      outdoor:  'Evaluate cancellation or emergency procedures. Immediate action may be required.',
+      roads:    'Evaluate travel restriction or emergency procedures. Immediate action may be required.',
     },
   };
   return recs[level][category];
@@ -95,7 +95,7 @@ function calcScoreByType(inputs, mode, type) {
 
 function calcScoresFromInputs(inputs, mode) {
   return {
-    campus:    calcScoreByType(inputs, mode, 'campus'),
+    facility:  calcScoreByType(inputs, mode, 'facility'),
     outdoor:   calcScoreByType(inputs, mode, 'outdoor'),
     roads:     calcScoreByType(inputs, mode, 'roads'),
     rawInputs: inputs,
@@ -434,7 +434,7 @@ function buildConditionSummary(mode, rawInputs, locationName, result) {
       const label = rawInputs.rain === 33 ? '0.01–0.75"' : rawInputs.rain === 67 ? '0.75–1.5"' : '>1.5"';
       const detail = meta ? ` NWS QPF: ${meta.qpfIn}".` : '';
       items.push({ tag: 'RAIN ACCUMULATION', level: scoreToLevel(rawInputs.rain),
-        text: `Forecast precipitation of ${label} for ${loc}.${detail} Evaluate outdoor event surfaces, drainage around campus infrastructure, and road ponding risk.` });
+        text: `Forecast precipitation of ${label} for ${loc}.${detail} Evaluate outdoor event surfaces, drainage around site infrastructure, and road ponding risk.` });
     }
     if (rawInputs.hail > 0) {
       const label = rawInputs.hail === 100 ? 'Large hail (≥1" diameter)' : 'Hail potential — Severe Thunderstorm alert or forecast';
@@ -459,9 +459,9 @@ function buildConditionSummary(mode, rawInputs, locationName, result) {
         text: `Maximum gusts of ${labels[rawInputs.windGust]}${detail} forecast for ${loc}. Gusts above 58 mph meet NWS High Wind Warning criteria.` });
     }
     if (rawInputs.flood > 0) items.push({ tag: 'FLASH FLOOD', level: 'red',
-      text: `Flash flooding is possible for ${loc}. Evaluate road closures on low-lying routes, campus drainage infrastructure, and parking lot flood risk.` });
+      text: `Flash flooding is possible for ${loc}. Evaluate road closures on low-lying routes, site drainage infrastructure, and parking lot flood risk.` });
     if (rawInputs.tornado > 0) items.push({ tag: 'TORNADO POSSIBLE', level: 'red',
-      text: `Tornado occurrence is possible for ${loc}. Verify shelter-in-place locations are accessible and all campus areas have a clear evacuation route to interior spaces.` });
+      text: `Tornado occurrence is possible for ${loc}. Verify shelter-in-place locations are accessible and all facility areas have a clear evacuation route to interior spaces.` });
   }
 
   if (mode === 'heat') {
@@ -490,13 +490,13 @@ function buildConditionSummary(mode, rawInputs, locationName, result) {
       const detail = meta ? ` NWS forecast: ${meta.iceIn}".` : '';
       const note   = rawInputs.ice === 100 ? ' Exceeds NWS Ice Storm Warning threshold (≥0.25").' : rawInputs.ice === 67 ? ' Approaches NWS Ice Storm Warning threshold.' : '';
       items.push({ tag: 'ICE ACCUMULATION', level: scoreToLevel(rawInputs.ice),
-        text: `Ice accumulation of ${labels[rawInputs.ice]} forecast for ${loc}.${detail}${note} Evaluate sidewalk treatment schedules, parking lot access, and early campus operation changes.` });
+        text: `Ice accumulation of ${labels[rawInputs.ice]} forecast for ${loc}.${detail}${note} Evaluate sidewalk treatment schedules, parking lot access, and early operational changes.` });
     }
     if (rawInputs.snow > 0) {
       const labels = { 33: '1–3"', 67: '3–6"', 100: '>6"' };
       const detail = meta ? ` NWS forecast: ${meta.snowIn}".` : '';
       items.push({ tag: 'SNOW ACCUMULATION', level: scoreToLevel(rawInputs.snow),
-        text: `Snow accumulation of ${labels[rawInputs.snow]} forecast for ${loc}.${detail} Evaluate snow removal capacity, parking lot and walkway clearance timing, and impact on early-morning campus access.` });
+        text: `Snow accumulation of ${labels[rawInputs.snow]} forecast for ${loc}.${detail} Evaluate snow removal capacity, parking lot and walkway clearance timing, and impact on early-morning site access.` });
     }
     if (rawInputs.windChill > 0) {
       const labels = { 25: '20–32°F', 50: '10–20°F', 75: '0–10°F', 100: '<0°F' };
@@ -660,9 +660,9 @@ function renderResults(activeModes, modeResults, nwsData, windowStart, windowEnd
         <div class="mode-results-label mode-results-label--${cfg.cssClass}">${cfg.label}</div>
         <div class="score-cards">
           ${[
-            { key: 'campus',  label: 'Campus Operations', score: result.campus },
-            { key: 'outdoor', label: 'Outdoor Activities', score: result.outdoor },
-            { key: 'roads',   label: 'Roads & Travel',     score: result.roads, subdued: mode === 'heat' },
+            { key: 'facility', label: 'Facility Operations', score: result.facility },
+            { key: 'outdoor',  label: 'Outdoor Activities',  score: result.outdoor },
+            { key: 'roads',    label: 'Roads & Travel',      score: result.roads, note: mode === 'heat' },
           ].map(cat => renderScoreCard(cat, mode)).join('')}
         </div>
       </div>`;
@@ -699,11 +699,11 @@ function renderResults(activeModes, modeResults, nwsData, windowStart, windowEnd
   }
 }
 
-function renderScoreCard({ key, label, score, subdued }, mode) {
+function renderScoreCard({ key, label, score, note }, mode) {
   const level = scoreToLevel(score);
-  const isSubdued = subdued && mode === 'heat';
+  const showNote = note && mode === 'heat';
   return `
-    <div class="score-card${isSubdued ? ' score-card--subdued' : ''}">
+    <div class="score-card">
       <span class="sr-only">${label}: ${LEVEL_LABELS[level]}, score ${score} out of 100. ${getRecommendation(level, key)}</span>
       <div class="score-card-category" aria-hidden="true">${label}</div>
       <div class="score-card-main" aria-hidden="true">
@@ -713,7 +713,7 @@ function renderScoreCard({ key, label, score, subdued }, mode) {
       <div class="score-number score-number--${level}" aria-hidden="true">${score}</div>
       <div class="score-out-of" aria-hidden="true">out of 100</div>
       <div class="score-recommendation" aria-hidden="true">${getRecommendation(level, key)}</div>
-      ${isSubdued ? '<div class="score-subdued-label">Heat has minimal direct impact on road conditions. Score reflects indirect factors only.</div>' : ''}
+      ${showNote ? '<div class="score-subdued-label">Heat has minimal direct impact on road conditions. Score reflects indirect factors only.</div>' : ''}
     </div>`;
 }
 
@@ -903,9 +903,9 @@ function handleExport() {
     winter: { label: 'Winter Weather', icon: '❄'  },
   };
   const categories = [
-    { key: 'campus',  label: 'Campus Operations' },
-    { key: 'outdoor', label: 'Outdoor Activities' },
-    { key: 'roads',   label: 'Roads & Travel' },
+    { key: 'facility', label: 'Facility Operations' },
+    { key: 'outdoor',  label: 'Outdoor Activities' },
+    { key: 'roads',    label: 'Roads & Travel' },
   ];
 
   const alertsBarHTML = isAPI && nwsData.alerts.length > 0 ? `
@@ -949,9 +949,9 @@ function handleExport() {
           ${categories.map(cat => {
             const score = result[cat.key];
             const level = scoreToLevel(score);
-            const subdued = cat.key === 'roads' && mode === 'heat';
+            const showNote = cat.key === 'roads' && mode === 'heat';
             return `
-              <div class="rpt-score-cell${subdued ? ' rpt-score-cell--subdued' : ''}">
+              <div class="rpt-score-cell">
                 <div class="rpt-score-cat">${cat.label}</div>
                 <div class="rpt-score-level-row">
                   <div class="rpt-risk-bar rpt-risk-bar--${level}"></div>
@@ -962,7 +962,7 @@ function handleExport() {
                 </div>
                 <div class="rpt-score-status">${LEVEL_LABELS[level]}</div>
                 <div class="rpt-score-rec">${getRecommendation(level, cat.key)}</div>
-                ${subdued ? '<div class="rpt-subdued-note">Heat has minimal direct road impact.</div>' : ''}
+                ${showNote ? '<div class="rpt-subdued-note">Heat has minimal direct road impact.</div>' : ''}
               </div>`;
           }).join('')}
         </div>
@@ -993,7 +993,6 @@ function handleExport() {
     .rpt-score-table { display: grid; grid-template-columns: repeat(3, 1fr); }
     .rpt-score-cell { padding: 6pt 8pt; border-right: 1pt solid #e8e8e8; }
     .rpt-score-cell:last-child { border-right: none; }
-    .rpt-score-cell--subdued { background: #fafafa; opacity: 0.7; }
     .rpt-score-cat { font-size: 6pt; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin-bottom: 4pt; }
     .rpt-score-level-row { display: flex; align-items: center; gap: 4pt; margin-bottom: 3pt; }
     .rpt-risk-bar { width: 3pt; height: 22pt; border-radius: 1pt; flex-shrink: 0; }
@@ -1023,7 +1022,7 @@ function handleExport() {
   </div>
   ${alertsBarHTML}${modeSectionsHTML}
   <div class="rpt-footer">
-    <div class="rpt-disclaimer"><strong>Decision Support Only.</strong> Risk scores do not constitute an official operational directive. Final authority rests with authorized campus leadership. Reassess as conditions evolve.</div>
+    <div class="rpt-disclaimer"><strong>Decision Support Only.</strong> Risk scores do not constitute an official operational directive. Final authority rests with authorized leadership. Reassess as conditions evolve.</div>
     <div class="rpt-footer-right">Kestrel &nbsp;|&nbsp; For Internal Use Only</div>
   </div></body></html>`;
 

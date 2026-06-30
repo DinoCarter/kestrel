@@ -1,12 +1,12 @@
-# Weather Decision Support Tool (WDST) v2.0
+# Kestrel
 
-A browser-based risk scoring tool for standardizing weather-related operational decisions on university campuses in Oklahoma.
+A browser-based risk scoring tool for standardizing weather-related operational decisions across Oklahoma sites.
 
 ---
 
 ## What this is (and isn't)
 
-This is a **decision aid**, not a decision authority. It takes structured weather forecast inputs, runs them through a weighted scoring formula, and produces a 0–100 risk score for three operational categories: Campus Operations, Outdoor Activities, and Roads & Travel.
+This is a **decision aid**, not a decision authority. It takes structured weather forecast inputs, runs them through a weighted scoring formula, and produces a 0–100 risk score for three operational categories: Facility Operations, Outdoor Activities, and Roads & Travel.
 
 The scores inform human judgment, they don't make decisions. That distinction is intentional and appears throughout the interface language.
 
@@ -31,9 +31,9 @@ Scores are capped at 100, floored at 0, and rounded to the nearest integer.
 **Example:** A severe weather assessment with >1.5" rain (100 pts), large hail (100 pts), and lightning (100 pts), everything else at zero:
 
 ```
-Campus Operations = (100×15 + 100×15 + 100×5) / 100
-                  = (1500 + 1500 + 500) / 100
-                  = 35 → "Elevated Caution"
+Facility Operations = (100×15 + 100×15 + 100×5) / 100
+                    = (1500 + 1500 + 500) / 100
+                    = 35 → "Elevated Caution"
 ```
 
 ---
@@ -52,7 +52,7 @@ Campus Operations = (100×15 + 100×15 + 100×5) / 100
 
 ### Severe Weather score weights (%)
 
-| Input | Campus Ops | Outdoor Activities | Roads & Travel |
+| Input | Facility Ops | Outdoor Activities | Roads & Travel |
 |---|---|---|---|
 | Rain | 15 | 20 | 20 |
 | Hail | 15 | 15 | 15 |
@@ -77,7 +77,7 @@ Campus Operations = (100×15 + 100×15 + 100×5) / 100
 
 ### Heat score weights (%)
 
-| Input | Campus Ops | Outdoor Activities | Roads & Travel |
+| Input | Facility Ops | Outdoor Activities | Roads & Travel |
 |---|---|---|---|
 | WBGT or Heat Index | 80 | 80 | 10 |
 | Sustained Wind | 20 | 20 | 10 |
@@ -99,7 +99,7 @@ Campus Operations = (100×15 + 100×15 + 100×5) / 100
 
 ### Winter Weather score weights (%)
 
-| Input | Campus Ops | Outdoor Activities | Roads & Travel |
+| Input | Facility Ops | Outdoor Activities | Roads & Travel |
 |---|---|---|---|
 | Ice Accumulation | 50 | 20 | 40 |
 | Snow Accumulation | 20 | 20 | 20 |
@@ -156,7 +156,7 @@ The following featues or elements are planned for future versions:
 - User authentication with role-based access
 - Server-side assessment database with full history
 - Searchable decision log linking assessments to actual operational decisions
-- Multi-campus dashboard (all counties at once)
+- Multi-site dashboard (all counties at once)
 - Seasonal mode presets (hide irrelevant modes, adjust weights)
 - Native mobile app (iOS/Android) with push notifications
 
@@ -171,5 +171,5 @@ The following featues or elements are planned for future versions:
 
 ---
 
-*This tool is not an official university policy, emergency operations plan, or legally binding decision framework.*
-*Final authority for all campus operational decisions rests with authorized leadership.*
+*This tool is not an official policy, emergency operations plan, or legally binding decision framework.*
+*Final authority for all operational decisions rests with authorized leadership.*

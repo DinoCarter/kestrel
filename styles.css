@@ -685,8 +685,6 @@ input:disabled { opacity: 0.35; cursor: not-allowed; }
   position: relative;
 }
 .score-card:last-child { border-right: none; }
-.score-card--subdued { opacity: 0.6; background: rgba(0,0,0,0.15); }
-.score-card--subdued .score-number { color: var(--text-hint); }
 
 .score-card-category {
   font-size: 0.72rem;
