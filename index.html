@@ -3,18 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Oklahoma State University Weather Decision Support Tool — a standardized risk scoring framework for campus operational decisions." />
-  <title>Weather Decision Support Tool — OSU Office of Emergency Management</title>
+  <meta name="description" content="HAWK — a standardized risk scoring framework for campus operational decisions." />
+  <title>HAWK — Weather Decision Support Tool</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- Skip link for keyboard users -->
   <a href="#results-panel" class="skip-link">Skip to results</a>
 
-  <!-- ═══════════════════════════════════════════════
-       SITE HEADER
-  ═══════════════════════════════════════════════ -->
   <header class="site-header" role="banner">
     <div class="header-inner">
       <div class="header-title">
@@ -26,7 +22,6 @@
   </header>
 
   <main id="main-content">
-
     <div class="form-wrapper">
 
       <!-- ═══════════════════════════════════════════════
@@ -38,44 +33,44 @@
           <div class="context-grid">
 
             <div class="field-group">
-              <label for="county" class="field-label">County <span class="required" aria-label="required">*</span></label>
-              <select id="county" name="county" required aria-required="true">
-                <option value="">— Select county —</option>
-                <option value="payne">Payne County (Stillwater)</option>
-                <option value="tulsa">Tulsa County (Tulsa / CHS)</option>
-                <option value="cherokee">Cherokee County (Tahlequah)</option>
+              <label for="assessor-name" class="field-label">Assessor Name <span class="required" aria-label="required">*</span></label>
+              <input type="text" id="assessor-name" name="assessor-name" placeholder="Your full name" required aria-required="true" />
+            </div>
+
+            <div class="field-group">
+              <label for="assessor-title" class="field-label">Job Title / Role <span class="required" aria-label="required">*</span></label>
+              <input type="text" id="assessor-title" name="assessor-title" placeholder="e.g., Emergency Manager, Operations Director" required aria-required="true" />
+            </div>
+
+            <div class="field-group">
+              <label for="location" class="field-label">Location <span class="required" aria-label="required">*</span></label>
+              <select id="location" name="location" required aria-required="true">
+                <option value="okc">Oklahoma City</option>
+                <option value="stillwater" selected>Stillwater</option>
+                <option value="tulsa">Tulsa</option>
+                <option value="tahlequah">Tahlequah</option>
+                <option value="okmulgee">Okmulgee</option>
               </select>
             </div>
 
             <div class="field-group">
-              <label for="assessment-date" class="field-label">Assessment Date <span class="required" aria-label="required">*</span></label>
-              <input type="date" id="assessment-date" name="assessment-date" required aria-required="true" />
+              <!-- spacer to keep grid aligned -->
+            </div>
+
+            <div class="field-group">
+              <label for="forecast-start" class="field-label">Forecast Window Start <span class="required" aria-label="required">*</span></label>
+              <input type="datetime-local" id="forecast-start" name="forecast-start" required aria-required="true" />
+            </div>
+
+            <div class="field-group">
+              <label for="forecast-end" class="field-label">Forecast Window End <span class="required" aria-label="required">*</span></label>
+              <input type="datetime-local" id="forecast-end" name="forecast-end" required aria-required="true" />
             </div>
 
             <div class="field-group field-group--wide">
-              <label for="forecast-period" class="field-label">Forecast Period</label>
-              <input
-                type="text"
-                id="forecast-period"
-                name="forecast-period"
-                placeholder="e.g., December 14, 2025 — 6:00 AM to 6:00 PM"
-                aria-describedby="forecast-period-hint"
-              />
-              <span class="field-hint" id="forecast-period-hint">Enter the specific date range or period this forecast applies to. This tool is designed for day-before predictive use, not real-time monitoring.</span>
-            </div>
-
-            <div class="field-group">
-              <label for="assessor-name" class="field-label">Assessor Name <span class="optional">(optional)</span></label>
-              <input type="text" id="assessor-name" name="assessor-name" placeholder="Your name" />
-            </div>
-
-            <div class="field-group">
-              <label for="forecast-confidence" class="field-label">Forecast Confidence</label>
-              <select id="forecast-confidence" name="forecast-confidence">
-                <option value="high">High — forecast is well-established</option>
-                <option value="moderate">Moderate — some uncertainty remains</option>
-                <option value="low">Low — conditions may change significantly</option>
-              </select>
+              <div class="forecast-window-hint" role="note">
+                <span>Defaulting to the next 12 hours from now. <strong>Update the forecast window if assessing a different time period.</strong></span>
+              </div>
             </div>
 
           </div>
@@ -83,86 +78,78 @@
       </section>
 
       <!-- ═══════════════════════════════════════════════
-           NWS ADVISORY CHECKLIST
+           DATA SOURCES PANEL
       ═══════════════════════════════════════════════ -->
-      <section class="advisory-section" aria-label="NWS advisory checklist">
-        <fieldset>
-          <legend class="section-legend">NWS Advisory Checklist
-            <span class="legend-note">Selections are for documentation only — they do not affect risk scores.</span>
-          </legend>
-
-          <div class="advisory-grid">
-            <div class="advisory-group">
-              <h3 class="advisory-group-title">Severe Weather</h3>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Tornado Watch" /> Tornado Watch</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Tornado Warning" /> Tornado Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Severe Thunderstorm Watch" /> Severe Thunderstorm Watch</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Severe Thunderstorm Warning" /> Severe Thunderstorm Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Flash Flood Watch" /> Flash Flood Watch</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Flash Flood Warning" /> Flash Flood Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Special Weather Statement" /> Special Weather Statement</label>
+      <section class="data-sources-wrapper" aria-label="Data sources reference">
+        <button class="data-sources-toggle" aria-expanded="false" aria-controls="data-sources-panel" id="data-sources-btn">
+          <span class="toggle-icon" aria-hidden="true">▸</span>
+          Data Sources &amp; Reference Links
+        </button>
+        <div id="data-sources-panel" class="data-sources-panel" hidden>
+          <div class="data-sources-grid">
+            <div class="source-group">
+              <h3 class="source-group-title">National Weather Service</h3>
+              <ul>
+                <li><a href="https://www.weather.gov/oun/" target="_blank" rel="noopener noreferrer">NWS Norman Office (weather.gov/oun)</a></li>
+                <li><a href="https://www.weather.gov/tsa/" target="_blank" rel="noopener noreferrer">NWS Tulsa Area Office (weather.gov/tsa)</a></li>
+                <li><a href="https://api.weather.gov/" target="_blank" rel="noopener noreferrer">NWS API (api.weather.gov)</a></li>
+              </ul>
             </div>
-
-            <div class="advisory-group">
-              <h3 class="advisory-group-title">Winter Weather</h3>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Winter Storm Watch" /> Winter Storm Watch</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Winter Storm Warning" /> Winter Storm Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Ice Storm Warning" /> Ice Storm Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Winter Weather Advisory" /> Winter Weather Advisory</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Freezing Rain Advisory" /> Freezing Rain Advisory</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Wind Chill Advisory" /> Wind Chill Advisory</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Wind Chill Warning" /> Wind Chill Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Blizzard Warning" /> Blizzard Warning</label>
-            </div>
-
-            <div class="advisory-group">
-              <h3 class="advisory-group-title">Heat &amp; Wind</h3>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Excessive Heat Watch" /> Excessive Heat Watch</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Excessive Heat Warning" /> Excessive Heat Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Heat Advisory" /> Heat Advisory</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Wind Advisory" /> Wind Advisory</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="High Wind Watch" /> High Wind Watch</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="High Wind Warning" /> High Wind Warning</label>
-              <label class="checkbox-label"><input type="checkbox" name="advisory" value="Dense Fog Advisory" /> Dense Fog Advisory</label>
+            <div class="source-group">
+              <h3 class="source-group-title">Road Conditions</h3>
+              <ul>
+                <li><a href="https://www.arcgis.com/apps/dashboards/5f64b2fba27047a9a3e2fb1d8f5f8b67" target="_blank" rel="noopener noreferrer">Oklahoma Road Conditions (ODOT ArcGIS)</a></li>
+              </ul>
             </div>
           </div>
-        </fieldset>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════
+           DATA INPUT MODE TOGGLE
+      ═══════════════════════════════════════════════ -->
+      <section class="input-mode-section" aria-label="Data input mode">
+        <div class="input-mode-label" id="input-mode-label">Data Source</div>
+        <div class="input-mode-tabs" role="group" aria-labelledby="input-mode-label">
+          <button
+            type="button"
+            class="input-mode-tab input-mode-tab--active"
+            id="mode-tab-api"
+            data-input-mode="api"
+            aria-pressed="true"
+          >
+            Fetch from NWS API
+          </button>
+          <button
+            type="button"
+            class="input-mode-tab"
+            id="mode-tab-manual"
+            data-input-mode="manual"
+            aria-pressed="false"
+          >
+            Enter data manually
+          </button>
+        </div>
+        <p class="input-mode-hint" id="input-mode-hint-api">Weather data will be pulled automatically from the NWS API for the selected location and forecast window.</p>
+        <p class="input-mode-hint" id="input-mode-hint-manual" hidden>Enter forecast values manually. Use this if the NWS API is unavailable or you need to assess a specific scenario.</p>
       </section>
 
       <!-- ═══════════════════════════════════════════════
            HAZARD MODE SELECTOR
       ═══════════════════════════════════════════════ -->
       <section class="hazard-mode-section" aria-label="Hazard mode selection">
-        <div class="hazard-mode-label" id="hazard-mode-label">Select Hazard Mode(s)</div>
-        <p class="hazard-mode-hint">Multiple modes may be active simultaneously. Each produces an independent set of risk scores.</p>
+        <div class="hazard-mode-label" id="hazard-mode-label">Select Hazard Type(s)</div>
+        <p class="hazard-mode-hint">Multiple types may be active simultaneously. Each produces an independent set of risk scores.</p>
         <div class="hazard-tabs" role="group" aria-labelledby="hazard-mode-label">
-          <button
-            type="button"
-            class="hazard-tab"
-            data-mode="severe"
-            aria-pressed="false"
-            aria-controls="inputs-severe"
-          >
+          <button type="button" class="hazard-tab" data-mode="severe" aria-pressed="false">
             <span class="tab-icon" aria-hidden="true">⛈</span>
             Severe Weather
           </button>
-          <button
-            type="button"
-            class="hazard-tab"
-            data-mode="heat"
-            aria-pressed="false"
-            aria-controls="inputs-heat"
-          >
+          <button type="button" class="hazard-tab" data-mode="heat" aria-pressed="false">
             <span class="tab-icon" aria-hidden="true">☀</span>
             Heat
           </button>
-          <button
-            type="button"
-            class="hazard-tab"
-            data-mode="winter"
-            aria-pressed="false"
-            aria-controls="inputs-winter"
-          >
+          <button type="button" class="hazard-tab" data-mode="winter" aria-pressed="false">
             <span class="tab-icon" aria-hidden="true">❄</span>
             Winter Weather
           </button>
@@ -170,95 +157,79 @@
       </section>
 
       <!-- ═══════════════════════════════════════════════
-           SEVERE WEATHER INPUTS
+           SEVERE WEATHER INPUTS (manual mode only)
       ═══════════════════════════════════════════════ -->
       <section id="inputs-severe" class="hazard-inputs hazard-inputs--severe" hidden aria-label="Severe weather inputs">
         <fieldset>
           <legend class="section-legend section-legend--severe">
-            <span class="mode-badge mode-badge--severe" aria-hidden="true">⛈</span>
+            <span class="mode-badge" aria-hidden="true">⛈</span>
             Severe Weather — Forecast Inputs
           </legend>
           <div class="inputs-grid">
 
             <div class="field-group">
               <label for="sw-rain" class="field-label">Rain Accumulation</label>
-              <select id="sw-rain" name="sw-rain" aria-describedby="sw-rain-hint">
-                <option value="0">None </option>
-                <option value="33">0.01 – 0.75&quot; </option>
-                <option value="67">0.75 – 1.5&quot; </option>
-                <option value="100">&gt;1.5&quot; </option>
+              <select id="sw-rain" name="sw-rain">
+                <option value="0">None</option>
+                <option value="33">0.01 – 0.75"</option>
+                <option value="67">0.75 – 1.5"</option>
+                <option value="100">&gt;1.5"</option>
               </select>
-              <span class="field-hint" id="sw-rain-hint">Expected total rainfall during the forecast period.</span>
             </div>
 
             <div class="field-group">
               <label for="sw-hail" class="field-label">Hail</label>
               <select id="sw-hail" name="sw-hail">
-                <option value="0">None </option>
-                <option value="50">Small — &lt;1&quot; diameter </option>
-                <option value="100">Large — ≥1&quot; diameter </option>
+                <option value="0">None</option>
+                <option value="50">Small — &lt;1" diameter</option>
+                <option value="100">Large — ≥1" diameter</option>
               </select>
             </div>
 
             <div class="field-group">
               <label class="field-label" id="sw-lightning-label">Lightning Forecast</label>
-              <div class="toggle-group" role="group" aria-labelledby="sw-lightning-label" aria-describedby="sw-lightning-hint">
-                <label class="toggle-option">
-                  <input type="radio" name="sw-lightning" value="0" checked /> No
-                </label>
-                <label class="toggle-option">
-                  <input type="radio" name="sw-lightning" value="100" /> Yes
-                </label>
+              <div class="toggle-group" role="group" aria-labelledby="sw-lightning-label">
+                <label class="toggle-option"><input type="radio" name="sw-lightning" value="0" checked /> No</label>
+                <label class="toggle-option"><input type="radio" name="sw-lightning" value="100" /> Yes</label>
               </div>
-              <span class="field-hint" id="sw-lightning-hint">Forecast probability of lightning during the period — not a real-time detection input.</span>
             </div>
 
             <div class="field-group">
               <label for="sw-wind-sustained" class="field-label">Sustained Wind Speed</label>
               <select id="sw-wind-sustained" name="sw-wind-sustained">
-                <option value="0">&lt;20 mph </option>
-                <option value="25">20 – 30 mph </option>
-                <option value="50">30 – 40 mph </option>
-                <option value="75">40 – 50 mph </option>
-                <option value="100">&gt;50 mph </option>
+                <option value="0">&lt;20 mph</option>
+                <option value="25">20 – 30 mph</option>
+                <option value="50">30 – 40 mph</option>
+                <option value="75">40 – 50 mph</option>
+                <option value="100">&gt;50 mph</option>
               </select>
             </div>
 
             <div class="field-group">
               <label for="sw-wind-gust" class="field-label">Maximum Wind Gust</label>
               <select id="sw-wind-gust" name="sw-wind-gust">
-                <option value="0">&lt;30 mph </option>
-                <option value="25">30 – 40 mph </option>
-                <option value="50">40 – 50 mph </option>
-                <option value="75">50 – 60 mph </option>
-                <option value="100">&gt;60 mph </option>
+                <option value="0">&lt;30 mph</option>
+                <option value="25">30 – 40 mph</option>
+                <option value="50">40 – 50 mph</option>
+                <option value="75">50 – 60 mph</option>
+                <option value="100">&gt;60 mph</option>
               </select>
             </div>
 
             <div class="field-group">
               <label class="field-label" id="sw-flood-label">Flash Flood Possible</label>
-              <div class="toggle-group" role="group" aria-labelledby="sw-flood-label" aria-describedby="sw-flood-hint">
-                <label class="toggle-option">
-                  <input type="radio" name="sw-flood" value="0" checked /> No
-                </label>
-                <label class="toggle-option">
-                  <input type="radio" name="sw-flood" value="100" /> Yes
-                </label>
+              <div class="toggle-group" role="group" aria-labelledby="sw-flood-label">
+                <label class="toggle-option"><input type="radio" name="sw-flood" value="0" checked /> No</label>
+                <label class="toggle-option"><input type="radio" name="sw-flood" value="100" /> Yes</label>
               </div>
-              <span class="field-hint" id="sw-flood-hint">Based on NWS watches and outlooks. Forecast-based assessment only.</span>
             </div>
 
             <div class="field-group">
               <label class="field-label" id="sw-tornado-label">Tornado Possible</label>
-              <div class="toggle-group" role="group" aria-labelledby="sw-tornado-label" aria-describedby="sw-tornado-hint">
-                <label class="toggle-option">
-                  <input type="radio" name="sw-tornado" value="0" checked /> No
-                </label>
-                <label class="toggle-option">
-                  <input type="radio" name="sw-tornado" value="100" /> Yes
-                </label>
+              <div class="toggle-group" role="group" aria-labelledby="sw-tornado-label">
+                <label class="toggle-option"><input type="radio" name="sw-tornado" value="0" checked /> No</label>
+                <label class="toggle-option"><input type="radio" name="sw-tornado" value="100" /> Yes</label>
               </div>
-              <span class="field-hint" id="sw-tornado-hint">Based on NWS tornado watch or SPC outlook. Forecast-based assessment only.</span>
             </div>
 
           </div>
@@ -266,133 +237,117 @@
       </section>
 
       <!-- ═══════════════════════════════════════════════
-           HEAT INPUTS
+           HEAT INPUTS (manual mode only)
       ═══════════════════════════════════════════════ -->
       <section id="inputs-heat" class="hazard-inputs hazard-inputs--heat" hidden aria-label="Heat inputs">
         <fieldset>
           <legend class="section-legend section-legend--heat">
-            <span class="mode-badge mode-badge--heat" aria-hidden="true">☀</span>
+            <span class="mode-badge" aria-hidden="true">☀</span>
             Heat — Forecast Inputs
           </legend>
 
           <div class="heat-source-toggle field-group field-group--wide">
             <label class="field-label" id="heat-source-label">Primary Heat Stress Measure</label>
-            <div class="toggle-group" role="group" aria-labelledby="heat-source-label" aria-describedby="heat-source-hint">
-              <label class="toggle-option">
-                <input type="radio" name="heat-source" value="wbgt" id="heat-source-wbgt" checked /> Use WBGT
-              </label>
-              <label class="toggle-option">
-                <input type="radio" name="heat-source" value="hi" id="heat-source-hi" /> Use Heat Index
-              </label>
+            <div class="toggle-group" role="group" aria-labelledby="heat-source-label">
+              <label class="toggle-option"><input type="radio" name="heat-source" value="wbgt" id="heat-source-wbgt" checked /> Use WBGT</label>
+              <label class="toggle-option"><input type="radio" name="heat-source" value="hi"   id="heat-source-hi" /> Use Heat Index</label>
             </div>
-            <span class="field-hint" id="heat-source-hint">WBGT (Wet Bulb Globe Temperature) is preferred when available — it accounts for humidity, wind, and solar radiation. Use Heat Index when WBGT data is unavailable.</span>
+            <span class="field-hint">WBGT is preferred when available — it accounts for humidity, wind, and solar radiation.</span>
           </div>
 
           <div class="inputs-grid">
-
             <div class="field-group" id="wbgt-field-group">
               <label for="heat-wbgt" class="field-label">Wet Bulb Globe Temp (WBGT)</label>
-              <select id="heat-wbgt" name="heat-wbgt" aria-describedby="wbgt-hint">
-                <option value="0">&lt;82.0°F </option>
-                <option value="33">82.0 – 86.9°F </option>
-                <option value="67">87.0 – 89.9°F </option>
-                <option value="100">≥90.0°F </option>
+              <select id="heat-wbgt" name="heat-wbgt">
+                <option value="0">&lt;82.0°F</option>
+                <option value="33">82.0 – 86.9°F</option>
+                <option value="67">87.0 – 89.9°F</option>
+                <option value="100">≥90.0°F</option>
               </select>
-              <span class="field-hint" id="wbgt-hint">Composite heat stress measure accounting for temperature, humidity, wind, and solar radiation.</span>
             </div>
 
             <div class="field-group" id="hi-field-group">
               <label for="heat-hi" class="field-label">Heat Index</label>
-              <select id="heat-hi" name="heat-hi" disabled aria-describedby="hi-hint" aria-disabled="true">
-                <option value="0">&lt;90°F </option>
-                <option value="33">90 – 100°F </option>
-                <option value="67">100 – 108°F </option>
-                <option value="100">&gt;108°F </option>
+              <select id="heat-hi" name="heat-hi" disabled aria-disabled="true">
+                <option value="0">&lt;90°F</option>
+                <option value="33">90 – 100°F</option>
+                <option value="67">100 – 108°F</option>
+                <option value="100">&gt;108°F</option>
               </select>
-              <span class="field-hint" id="hi-hint">NWS apparent temperature combining temperature and relative humidity. Used only when WBGT is unavailable.</span>
             </div>
 
             <div class="field-group">
               <label for="heat-wind" class="field-label">Sustained Wind Speed</label>
-              <select id="heat-wind" name="heat-wind" aria-describedby="heat-wind-hint">
-                <option value="0">&lt;20 mph </option>
-                <option value="25">20 – 30 mph </option>
-                <option value="50">30 – 40 mph </option>
-                <option value="75">&gt;40 mph </option>
+              <select id="heat-wind" name="heat-wind">
+                <option value="0">&lt;20 mph</option>
+                <option value="25">20 – 30 mph</option>
+                <option value="50">30 – 40 mph</option>
+                <option value="75">&gt;40 mph</option>
               </select>
-              <span class="field-hint" id="heat-wind-hint">Wind reduces apparent heat stress at lower speeds; above 30 mph the drying effect diminishes and sustained exposure risk remains elevated.</span>
             </div>
-
           </div>
         </fieldset>
       </section>
 
       <!-- ═══════════════════════════════════════════════
-           WINTER WEATHER INPUTS
+           WINTER WEATHER INPUTS (manual mode only)
       ═══════════════════════════════════════════════ -->
       <section id="inputs-winter" class="hazard-inputs hazard-inputs--winter" hidden aria-label="Winter weather inputs">
         <fieldset>
           <legend class="section-legend section-legend--winter">
-            <span class="mode-badge mode-badge--winter" aria-hidden="true">❄</span>
+            <span class="mode-badge" aria-hidden="true">❄</span>
             Winter Weather — Forecast Inputs
           </legend>
           <div class="inputs-grid">
 
             <div class="field-group">
               <label for="ww-ice" class="field-label">Ice Accumulation</label>
-              <select id="ww-ice" name="ww-ice" aria-describedby="ww-ice-hint">
-                <option value="0">None </option>
-                <option value="33">Trace – 0.10&quot; </option>
-                <option value="67">0.10 – 0.25&quot; </option>
-                <option value="100">&gt;0.25&quot; </option>
+              <select id="ww-ice" name="ww-ice">
+                <option value="0">None</option>
+                <option value="33">Trace – 0.10"</option>
+                <option value="67">0.10 – 0.25"</option>
+                <option value="100">&gt;0.25"</option>
               </select>
-              <span class="field-hint" id="ww-ice-hint">The 0.25&quot; threshold corresponds to the NWS Ice Storm Warning issuance criterion.</span>
             </div>
 
             <div class="field-group">
               <label for="ww-snow" class="field-label">Snow Accumulation</label>
               <select id="ww-snow" name="ww-snow">
-                <option value="0">None </option>
-                <option value="33">1 – 3&quot; </option>
-                <option value="67">3 – 6&quot; </option>
-                <option value="100">&gt;6&quot; </option>
+                <option value="0">None</option>
+                <option value="33">1 – 3"</option>
+                <option value="67">3 – 6"</option>
+                <option value="100">&gt;6"</option>
               </select>
             </div>
 
             <div class="field-group">
               <label for="ww-windchill" class="field-label">Wind Chill</label>
-              <select id="ww-windchill" name="ww-windchill" aria-describedby="ww-windchill-hint">
-                <option value="0">&gt;32°F </option>
-                <option value="25">20 – 32°F </option>
-                <option value="50">10 – 20°F </option>
-                <option value="75">0 – 10°F </option>
-                <option value="100">&lt;0°F </option>
+              <select id="ww-windchill" name="ww-windchill">
+                <option value="0">&gt;32°F</option>
+                <option value="25">20 – 32°F</option>
+                <option value="50">10 – 20°F</option>
+                <option value="75">0 – 10°F</option>
+                <option value="100">&lt;0°F</option>
               </select>
-              <span class="field-hint" id="ww-windchill-hint">Thresholds align with NWS Wind Chill Advisory (&lt;20°F) and Wind Chill Warning (&lt;0°F) criteria.</span>
             </div>
 
             <div class="field-group">
               <label for="ww-gust" class="field-label">Maximum Wind Gust</label>
               <select id="ww-gust" name="ww-gust">
-                <option value="0">&lt;30 mph </option>
-                <option value="25">30 – 40 mph </option>
-                <option value="50">40 – 50 mph </option>
-                <option value="75">50 – 60 mph </option>
-                <option value="100">&gt;60 mph </option>
+                <option value="0">&lt;30 mph</option>
+                <option value="25">30 – 40 mph</option>
+                <option value="50">40 – 50 mph</option>
+                <option value="75">50 – 60 mph</option>
+                <option value="100">&gt;60 mph</option>
               </select>
             </div>
 
             <div class="field-group">
               <label class="field-label" id="ww-freezethaw-label">Freeze-Thaw Cycle</label>
-              <div class="toggle-group" role="group" aria-labelledby="ww-freezethaw-label" aria-describedby="ww-freezethaw-hint">
-                <label class="toggle-option">
-                  <input type="radio" name="ww-freezethaw" value="0" checked /> No
-                </label>
-                <label class="toggle-option">
-                  <input type="radio" name="ww-freezethaw" value="100" /> Yes
-                </label>
+              <div class="toggle-group" role="group" aria-labelledby="ww-freezethaw-label">
+                <label class="toggle-option"><input type="radio" name="ww-freezethaw" value="0" checked /> No</label>
+                <label class="toggle-option"><input type="radio" name="ww-freezethaw" value="100" /> Yes</label>
               </div>
-              <span class="field-hint" id="ww-freezethaw-hint">Temperatures crossing 32°F in both directions — a primary mechanism for black ice formation on untreated surfaces, especially in morning hours.</span>
             </div>
 
           </div>
@@ -405,41 +360,9 @@
       <div class="calculate-wrapper">
         <div id="calc-error" class="calc-error" role="alert" aria-live="assertive" hidden></div>
         <button type="button" id="calculate-btn" class="calculate-btn">
-          Calculate Risk Assessment
+          Fetch Weather Data &amp; Calculate Risk
         </button>
       </div>
-
-      <!-- ═══════════════════════════════════════════════
-           DATA SOURCES PANEL
-      ═══════════════════════════════════════════════ -->
-      <section class="data-sources-wrapper" aria-label="Data sources reference">
-        <button
-          class="data-sources-toggle"
-          aria-expanded="false"
-          aria-controls="data-sources-panel"
-          id="data-sources-btn"
-        >
-          <span class="toggle-icon" aria-hidden="true">▸</span>
-          Data Sources &amp; Reference Links
-        </button>
-        <div id="data-sources-panel" class="data-sources-panel" hidden>
-          <div class="data-sources-grid">
-            <div class="source-group">
-              <h3 class="source-group-title">National Weather Service</h3>
-              <ul>
-                <li><a href="https://www.weather.gov/oun/" target="_blank" rel="noopener noreferrer">NWS Norman Office (weather.gov/oun)</a></li>
-                <li><a href="https://www.weather.gov/tsa/" target="_blank" rel="noopener noreferrer">NWS Tulsa Area Office (weather.gov/tsa)</a></li>
-              </ul>
-            </div>
-            <div class="source-group">
-              <h3 class="source-group-title">Road Conditions</h3>
-              <ul>
-                <li><a href="https://www.arcgis.com/apps/dashboards/5f64b2fba27047a9a3e2fb1d8f5f8b67" target="_blank" rel="noopener noreferrer">Oklahoma Road Conditions (ODOT ArcGIS)</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
 
     </div><!-- /.form-wrapper -->
 
@@ -454,24 +377,16 @@
       tabindex="-1"
       hidden
     >
-
-      <div id="results-content">
-        <!-- Populated by JS -->
-      </div>
+      <div id="results-content"></div>
 
       <p class="disclaimer">
-        <strong>Decision Support Only.</strong> This tool provides structured risk scores to inform human judgment. Scores are based on forecast inputs and do not constitute an official university policy, emergency directive, or operational order. Final authority for all campus operational decisions rests with authorized Oklahoma State University leadership. Forecasts are subject to change — reassess as conditions evolve.
+        <strong>Decision Support Only.</strong> This tool provides structured risk scores to inform human judgment. Scores do not constitute an official policy, emergency directive, or operational order. Final authority for all operational decisions rests with authorized leadership. Forecasts are subject to change — reassess as conditions evolve.
       </p>
 
       <div class="results-actions">
-        <button type="button" id="export-btn" class="btn-secondary">
-          Export Assessment as PDF
-        </button>
-        <button type="button" id="reset-btn" class="btn-ghost">
-          Start New Assessment
-        </button>
+        <button type="button" id="export-btn" class="btn-secondary">Export Assessment as PDF</button>
+        <button type="button" id="reset-btn" class="btn-ghost">Start New Assessment</button>
       </div>
-
     </section>
 
   </main>
@@ -479,55 +394,21 @@
   <footer class="site-footer" role="contentinfo">
     <div class="footer-inner">
       <span>Developed by Harrison Hill</span>
-      <span class="footer-version">HAWK v2.0 &nbsp;|&nbsp; For Internal Use Only</span>
+      <span class="footer-version">HAWK v3.0 &nbsp;|&nbsp; For Internal Use Only</span>
     </div>
   </footer>
 
-<div
-  id="beta-modal"
-  class="beta-modal"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="beta-modal-title"
-  hidden
->
-  <div class="beta-modal__content">
-    <h2 id="beta-modal-title">
-      Beta Testing Notice
-    </h2>
-
-    <p>
-      This Weather Decision Support Tool (WDST) is currently in beta testing
-      and validation.
-    </p>
-
-    <p>
-      The tool is under active development and should not be used as the sole
-      basis for any operational decisions.
-    </p>
-
-    <p>
-      The information, scores, and recommendations generated by this tool are
-      intended to support operational decision-making but do not replace
-      professional judgment, official weather products, university policy,
-      emergency procedures, or direction from authorized leadership.
-    </p>
-
-    <p>
-      This tool is a decision-support aid only and does not constitute an
-      official University directive, policy determination,
-      or operational decision.
-    </p>
-
-    <button
-      type="button"
-      id="beta-modal-close"
-      class="calculate-btn"
-    >
-      I Understand
-    </button>
+  <div id="beta-modal" class="beta-modal" role="dialog" aria-modal="true" aria-labelledby="beta-modal-title" hidden>
+    <div class="beta-modal__content">
+      <h2 id="beta-modal-title">Beta Testing Notice</h2>
+      <p>This Weather Decision Support Tool (WDST) is currently in beta testing and validation.</p>
+      <p>The tool is under active development and should not be used as the sole basis for any operational decisions.</p>
+      <p>When using NWS API mode, weather data is pulled live from the National Weather Service. Always verify conditions with official NWS products and your agency's established protocols.</p>
+      <p>This tool is a decision-support aid only and does not constitute an official University directive, policy determination, or operational decision.</p>
+      <button type="button" id="beta-modal-close" class="calculate-btn">I Understand</button>
+    </div>
   </div>
-</div>
+
   <script src="script.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    WDST v2.0 — styles.css
-   Oklahoma State University Office of Emergency Management
+   HAWK — Weather Decision Support Tool
    ═══════════════════════════════════════════════════════════ */
 
 /* ─── DESIGN TOKENS ──────────────────────────────────────── */
@@ -929,3 +929,284 @@ input:disabled {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ─── DATETIME-LOCAL INPUT ────────────────────────────────── */
+input[type="datetime-local"] {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  transition: border-color 0.15s ease;
+  min-height: 44px;
+  appearance: auto;
+}
+input[type="datetime-local"]:focus {
+  border-color: var(--focus-ring);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,95,204,0.15);
+}
+.assessment-context input[type="datetime-local"] {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-on-dark);
+  color-scheme: dark;
+}
+.assessment-context input[type="datetime-local"]:focus {
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.12);
+}
+
+/* ─── FORECAST WINDOW HINT ────────────────────────────────── */
+.forecast-window-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.5;
+}
+.forecast-window-hint strong { color: var(--text-on-dark); }
+.hint-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+/* ─── NWS DATA SECTION ────────────────────────────────────── */
+.nws-data-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-top: 3px solid var(--accent);
+  margin-bottom: var(--space-md);
+}
+.nws-data-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  background: #F7FAF9;
+  border-bottom: 1px solid var(--border-light);
+}
+.nws-data-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.nws-data-location {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.nws-data-body {
+  padding: var(--space-md) var(--space-xl);
+}
+
+/* Alert pills */
+.nws-alerts { margin-bottom: var(--space-sm); }
+.nws-alerts--none .no-alerts-note {
+  font-size: 0.825rem;
+  color: var(--risk-green);
+  font-weight: 600;
+}
+.nws-subsection-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-hint);
+  margin-bottom: var(--space-xs);
+}
+.alert-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+.alert-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--space-sm);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.alert-pill--warning  { background: var(--risk-red-bg);    color: var(--risk-red);    border: 1px solid var(--risk-red); }
+.alert-pill--watch    { background: var(--risk-amber-bg);  color: var(--risk-amber);  border: 1px solid var(--risk-amber); }
+.alert-pill--advisory { background: var(--risk-yellow-bg); color: #7B6100;            border: 1px solid var(--risk-yellow); }
+.alert-pill--statement{ background: #E3F2FD;               color: var(--severe-color);border: 1px solid var(--severe-color); }
+.alert-headline {
+  font-size: 0.775rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* Key metrics grid */
+.nws-metrics-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-xl);
+  margin-bottom: var(--space-sm);
+}
+.nws-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+}
+.nws-metric-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-hint);
+}
+.nws-metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hourly table */
+.nws-hourly-table {
+  display: grid;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: var(--space-xs);
+}
+.nws-hourly-header,
+.nws-hourly-row {
+  display: grid;
+  grid-template-columns: 80px 60px 1fr 70px 80px 1fr;
+  gap: 0;
+}
+.nws-hourly-header {
+  background: #F4F5F3;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-hint);
+}
+.nws-hourly-header span,
+.nws-hourly-row span {
+  padding: var(--space-xs) var(--space-sm);
+  border-right: 1px solid var(--border-light);
+}
+.nws-hourly-header span:last-child,
+.nws-hourly-row span:last-child { border-right: none; }
+.nws-hourly-row { border-bottom: 1px solid var(--border-light); }
+.nws-hourly-row:last-child { border-bottom: none; }
+.nws-hourly-row:hover { background: #F7FAF9; }
+.nws-time { font-weight: 600; color: var(--text-secondary); }
+.nws-forecast-text { color: var(--text-secondary); font-size: 0.775rem; }
+.nws-no-data { font-size: 0.8rem; color: var(--text-hint); font-style: italic; }
+
+.nws-attribution {
+  font-size: 0.72rem;
+  color: var(--text-hint);
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-light);
+}
+
+@media (max-width: 767px) {
+  .nws-data-body { padding: var(--space-md); }
+  .nws-data-header { padding: var(--space-sm) var(--space-md); }
+  .nws-hourly-header,
+  .nws-hourly-row {
+    grid-template-columns: 70px 50px 1fr 55px;
+  }
+  .nws-hourly-header span:nth-child(5),
+  .nws-hourly-row span:nth-child(5),
+  .nws-hourly-header span:nth-child(6),
+  .nws-hourly-row span:nth-child(6) { display: none; }
+}
+
+/* ─── CALCULATE BUTTON LOADING STATE ──────────────────────── */
+.calculate-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── INPUT MODE TOGGLE ───────────────────────────────────── */
+.input-mode-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xl);
+  border: 1px solid var(--border-light);
+}
+.input-mode-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-hint);
+  margin-bottom: var(--space-sm);
+}
+.input-mode-tabs {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  flex-wrap: wrap;
+}
+.input-mode-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-medium);
+  background: var(--bg-page);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  min-height: 44px;
+}
+.input-mode-tab:hover { border-color: var(--accent); color: var(--text-primary); }
+.input-mode-tab--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-dark);
+}
+.input-mode-hint {
+  font-size: 0.8rem;
+  color: var(--text-hint);
+  margin: 0;
+  line-height: 1.5;
+}
+@media (max-width: 480px) {
+  .input-mode-tab { flex: 1; justify-content: center; }
+  .input-mode-section { padding: var(--space-md); }
+}
+
+/* ─── DATA SOURCE BADGE (in results header) ───────────────── */
+.data-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px var(--space-sm);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.data-source-badge--api    { background: #E3F2FD; color: var(--severe-color); }
+.data-source-badge--manual { background: var(--risk-yellow-bg); color: #7B6100; }
