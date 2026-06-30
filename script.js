@@ -904,32 +904,27 @@ function handleExport() {
     @page { size: letter portrait; margin: 0; }
 
     /* Header */
-    .rpt-header { display: flex; align-items: stretch; border-bottom: 3pt solid #000; margin-bottom: 7pt; padding-bottom: 6pt; }
-    .rpt-header-logo { width: 6pt; background: #000; margin-right: 8pt; flex-shrink: 0; }
-    .rpt-header-body { flex: 1; }
-    .rpt-header-org { font-size: 6.5pt; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #555; margin-bottom: 1pt; }
-    .rpt-header-title { font-size: 14pt; font-weight: 800; color: #000; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 2pt; }
-    .rpt-header-sub { font-size: 7pt; color: #444; line-height: 1.5; }
-    .rpt-header-meta { text-align: right; display: flex; flex-direction: column; justify-content: flex-end; gap: 2pt; min-width: 130pt; }
-    .rpt-meta-row { font-size: 6.5pt; color: #555; line-height: 1.4; }
-    .rpt-meta-row strong { color: #000; font-weight: 700; }
-    .rpt-conf-badge { display: inline-block; font-size: 6pt; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 1pt 4pt; border: 1pt solid #000; border-radius: 2pt; margin-top: 3pt; }
+    .rpt-header { border-bottom: 3pt solid #3B6E5C; margin-bottom: 7pt; padding-bottom: 6pt; }
+    .rpt-header-body { display: flex; flex-direction: column; }
+    .rpt-header-title { font-size: 16pt; font-weight: 800; color: #14181C; letter-spacing: 0.06em; line-height: 1.1; margin-bottom: 1pt; }
+    .rpt-header-tagline { font-size: 7.5pt; color: #3B6E5C; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 3pt; }
+    .rpt-header-sub { font-size: 7pt; color: #555; line-height: 1.5; }
 
     /* Info bar */
-    .rpt-infobar { display: flex; align-items: stretch; border: 1pt solid #ccc; border-left: 3pt solid #000; margin-bottom: 7pt; background: #f8f8f8; }
+    .rpt-infobar { display: flex; align-items: stretch; border: 1pt solid #ccc; border-left: 3pt solid #3B6E5C; margin-bottom: 7pt; background: #f8f8f8; }
     .rpt-infobar-cell { flex: 1; padding: 4pt 7pt; border-right: 1pt solid #ddd; }
     .rpt-infobar-cell:last-child { border-right: none; }
     .rpt-info-label { font-size: 5.5pt; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #777; margin-bottom: 1.5pt; }
     .rpt-info-value { font-size: 7.5pt; font-weight: 600; color: #000; line-height: 1.3; }
 
     /* Advisory bar */
-    .rpt-advisory-bar { display: flex; align-items: baseline; gap: 5pt; border: 1pt solid #999; border-left: 3pt solid #000; background: #f0f0f0; padding: 3.5pt 7pt; margin-bottom: 7pt; flex-wrap: wrap; }
+    .rpt-advisory-bar { display: flex; align-items: baseline; gap: 5pt; border: 1pt solid #999; border-left: 3pt solid #3B6E5C; background: #f0f0f0; padding: 3.5pt 7pt; margin-bottom: 7pt; flex-wrap: wrap; }
     .rpt-advisory-label { font-size: 6pt; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #333; white-space: nowrap; }
     .rpt-advisory-pill { font-size: 6.5pt; font-weight: 600; color: #000; background: #fff; border: 0.5pt solid #aaa; padding: 0.5pt 4pt; border-radius: 2pt; }
 
     /* Mode section */
     .rpt-mode-section { border: 1pt solid #ccc; margin-bottom: 6pt; page-break-inside: avoid; }
-    .rpt-mode-header { display: flex; align-items: center; justify-content: space-between; background: #000; color: #fff; padding: 3.5pt 8pt; }
+    .rpt-mode-header { display: flex; align-items: center; justify-content: space-between; background: #14181C; color: #fff; padding: 3.5pt 8pt; }
     .rpt-mode-title { font-size: 7.5pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; }
     .rpt-mode-subtitle { font-size: 6pt; color: rgba(255,255,255,0.65); letter-spacing: 0.04em; }
 
@@ -976,39 +971,30 @@ function handleExport() {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Weather Risk Assessment — ${countyLabel}</title>
+  <title>H.A.W.K. — ${countyLabel}</title>
   <style>${reportStyles}</style>
 </head>
 <body>
   <div class="rpt-header">
-    <div class="rpt-header-logo"></div>
     <div class="rpt-header-body">
-      <div class="rpt-header-org">Oklahoma State University — Office of Emergency Management</div>
-      <div class="rpt-header-title">Weather Risk Assessment</div>
-      <div class="rpt-header-sub">${countyLabel} &nbsp;&middot;&nbsp; Forecast Period: ${forecastPer}</div>
-    </div>
-    <div class="rpt-header-meta">
-      <div class="rpt-meta-row">Date: <strong>${assessDate}</strong></div>
-      <div class="rpt-meta-row">Assessor: <strong>${assessor}</strong></div>
-      <div class="rpt-meta-row">Generated: <strong>${calcTime}</strong></div>
-      <div class="rpt-meta-row"><span class="rpt-conf-badge">${confLabel}</span></div>
+      <div class="rpt-header-title">H.A.W.K.</div>
+      <div class="rpt-header-tagline">Weather Risk Scoring for Campus Decisions</div>
+      <div class="rpt-header-sub">${countyLabel} &nbsp;&middot;&nbsp; ${assessDate}</div>
     </div>
   </div>
 
   <div class="rpt-infobar">
-    <div class="rpt-infobar-cell"><div class="rpt-info-label">County</div><div class="rpt-info-value">${countyLabel}</div></div>
-    <div class="rpt-infobar-cell"><div class="rpt-info-label">Assessment Date</div><div class="rpt-info-value">${assessDate}</div></div>
     <div class="rpt-infobar-cell"><div class="rpt-info-label">Forecast Period</div><div class="rpt-info-value">${forecastPer}</div></div>
-    <div class="rpt-infobar-cell"><div class="rpt-info-label">Assessor</div><div class="rpt-info-value">${assessor}</div></div>
     <div class="rpt-infobar-cell"><div class="rpt-info-label">Confidence</div><div class="rpt-info-value">${confLabel}</div></div>
+    <div class="rpt-infobar-cell"><div class="rpt-info-label">Assessor</div><div class="rpt-info-value">${assessor}</div></div>
   </div>
 
   ${advisoryBarHTML}
   ${modeSectionsHTML}
 
   <div class="rpt-footer">
-    <div class="rpt-disclaimer"><strong>Decision Support Only.</strong> This tool provides structured risk scores to inform human judgment. Scores are based on forecast inputs and do not constitute an official university policy, emergency directive, or operational order. Final authority rests with authorized Oklahoma State University leadership. Forecasts are subject to change — reassess as conditions evolve.</div>
-    <div class="rpt-footer-right">WDST v2.0 &nbsp;|&nbsp; For Internal Use Only</div>
+    <div class="rpt-disclaimer"><strong>Decision Support Only.</strong> This tool provides structured risk scores to inform human judgment. Scores are based on forecast inputs and do not constitute an official operational directive. Final authority rests with authorized campus leadership. Forecasts are subject to change — reassess as conditions evolve.</div>
+    <div class="rpt-footer-right">H.A.W.K. &nbsp;|&nbsp; For Internal Use Only</div>
   </div>
 </body>
 </html>`;

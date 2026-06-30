@@ -215,7 +215,9 @@ body.modal-open {
 /* ─── DATA SOURCES PANEL ──────────────────────────────────── */
 .data-sources-wrapper {
   background: var(--bg-card);
-  border-bottom: 1px solid var(--border-light);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 .data-sources-toggle {
   width: 100%;
