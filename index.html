@@ -58,13 +58,19 @@
             </div>
 
             <div class="field-group">
-              <label for="forecast-start" class="field-label">Forecast Window Start <span class="required" aria-label="required">*</span></label>
-              <input type="datetime-local" id="forecast-start" name="forecast-start" required aria-required="true" />
+              <span class="field-label" id="forecast-start-label">Forecast Window Start <span class="required" aria-label="required">*</span></span>
+              <div class="datetime-split" role="group" aria-labelledby="forecast-start-label">
+                <input type="date" id="forecast-start-date" name="forecast-start-date" required aria-required="true" aria-label="Forecast window start date" />
+                <input type="time" id="forecast-start-time" name="forecast-start-time" required aria-required="true" aria-label="Forecast window start time" />
+              </div>
             </div>
 
             <div class="field-group">
-              <label for="forecast-end" class="field-label">Forecast Window End <span class="required" aria-label="required">*</span></label>
-              <input type="datetime-local" id="forecast-end" name="forecast-end" required aria-required="true" />
+              <span class="field-label" id="forecast-end-label">Forecast Window End <span class="required" aria-label="required">*</span></span>
+              <div class="datetime-split" role="group" aria-labelledby="forecast-end-label">
+                <input type="date" id="forecast-end-date" name="forecast-end-date" required aria-required="true" aria-label="Forecast window end date" />
+                <input type="time" id="forecast-end-time" name="forecast-end-time" required aria-required="true" aria-label="Forecast window end time" />
+              </div>
             </div>
 
             <div class="field-group field-group--wide">

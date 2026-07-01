@@ -778,12 +778,18 @@ function initHeatSourceToggle() {
   });
 }
 
+function getForecastDateTimeValue(prefix) {
+  const date = document.getElementById(`${prefix}-date`).value;
+  const time = document.getElementById(`${prefix}-time`).value;
+  return date && time ? `${date}T${time}` : '';
+}
+
 function validate() {
   const name     = document.getElementById('assessor-name').value.trim();
   const jobTitle = document.getElementById('assessor-title').value.trim();
   const location = document.getElementById('location').value;
-  const start    = document.getElementById('forecast-start').value;
-  const end      = document.getElementById('forecast-end').value;
+  const start    = getForecastDateTimeValue('forecast-start');
+  const end      = getForecastDateTimeValue('forecast-end');
   if (!name)     return 'Please enter the assessor\'s name.';
   if (!jobTitle) return 'Please enter the assessor\'s job title or role.';
   if (!location) return 'Please select a location.';
@@ -808,8 +814,8 @@ async function handleCalculate() {
   errorEl.hidden = true; errorEl.textContent = '';
 
   const locationKey  = document.getElementById('location').value;
-  const windowStart  = new Date(document.getElementById('forecast-start').value);
-  const windowEnd    = new Date(document.getElementById('forecast-end').value);
+  const windowStart  = new Date(getForecastDateTimeValue('forecast-start'));
+  const windowEnd    = new Date(getForecastDateTimeValue('forecast-end'));
   const modesArray   = [...activeModes];
 
   if (inputMode === 'manual') {
@@ -1050,16 +1056,23 @@ function formatTime(d) {
   return d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-function toLocalDatetimeStr(d) {
+function toLocalDateStr(d) {
   const p = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+
+function toLocalTimeStr(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function setDefaultForecastWindow() {
   const now = new Date(); now.setMinutes(0, 0, 0);
   const end = new Date(now.getTime() + 12 * 3600000);
-  document.getElementById('forecast-start').value = toLocalDatetimeStr(now);
-  document.getElementById('forecast-end').value   = toLocalDatetimeStr(end);
+  document.getElementById('forecast-start-date').value = toLocalDateStr(now);
+  document.getElementById('forecast-start-time').value = toLocalTimeStr(now);
+  document.getElementById('forecast-end-date').value   = toLocalDateStr(end);
+  document.getElementById('forecast-end-time').value   = toLocalTimeStr(end);
 }
 
 function initBetaModal() {
